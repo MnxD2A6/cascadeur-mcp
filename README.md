@@ -36,10 +36,15 @@ Obtain any required assets directly from their owners under their own terms.
 
 ## Installation
 
-From this repository's root in PowerShell:
+On a new Windows machine, install Python 3.12 (including the Python launcher),
+Git, and Cascadeur separately. Download or clone this repository and open
+PowerShell in the extracted repository root (the directory containing
+`pyproject.toml`). Internet access is needed to obtain Python dependencies.
+No files from the original developer's machine are required.
 
 ```powershell
-python -m venv .venv
+py -3.12 -m venv .venv
+.\.venv\Scripts\python.exe -m pip install --upgrade pip
 .\.venv\Scripts\python.exe -m pip install -e ".[test]"
 .\.venv\Scripts\python.exe -m pytest -q
 ```
@@ -51,8 +56,15 @@ Install the host hook separately:
    `<Cascadeur>/resources/scripts/python/events/application_started/c01_startup.py`.
    Do not overwrite an unrelated existing script.
 3. In that installed copy, replace `"__C01_PROJECT_SOURCE__"` with a Python
-   string literal for this checkout's absolute `src` directory, for example
-   `r"C:\dev\cascadeur-mcp\src"`.
+   string literal for this checkout's absolute `src` directory. Generate the
+   correctly escaped value from the checkout root with:
+
+   ```powershell
+   .\.venv\Scripts\python.exe -c "from pathlib import Path; print(repr(str(Path('src').resolve())))"
+   ```
+
+   Paste the entire printed quoted value after `PROJECT_SOURCE =`. The
+   Cascadeur installation directory may require administrator write access.
 4. Start Cascadeur and wait for startup to complete. The hook schedules the
    bridge on Cascadeur's Qt main thread.
 
@@ -63,7 +75,10 @@ reinstalling the hook. To uninstall, close Cascadeur and remove only this hook.
 ## Usage
 
 Start with the read-only Codex configuration in `examples/codex.toml`. Replace
-its Python path with your virtual environment's absolute path. It launches:
+its Python path with your virtual environment's absolute path. Obtain that path
+with `(Resolve-Path .\.venv\Scripts\python.exe).Path`, keeping the TOML single
+quotes around it. Add the sample table to your client's MCP configuration;
+do not overwrite unrelated existing settings. It launches:
 
 ```text
 <checkout>/.venv/Scripts/python.exe -m cascadeur_mcp.server
@@ -78,6 +93,12 @@ Run the read-only smoke client against the running host:
 ```powershell
 .\.venv\Scripts\python.exe examples\smoke_client.py --output evidence\local\smoke.json
 ```
+
+Success requires `all_tools_succeeded: true` and real scene information in the
+response. The smoke output contains local runtime information and stays ignored.
+If the host is unavailable, check the hook's source path, restart Cascadeur,
+open a scene and confirm matching instance names. An installed Python package
+alone does not provide a running Cascadeur host.
 
 A typical editing sequence is:
 

@@ -33,3 +33,15 @@ not included here. No vendor code is copied into this source distribution.
 The automated suite checks input handling and adapter contracts, including an
 explicitly synthetic semantic topology fixture. A passing suite does not certify
 native solver behavior, licensing, visual fidelity, or production suitability.
+
+## Third-party code and attribution
+
+The separate `ThatGuyTHD/animation-mcp` repository was reviewed locally for
+animation workflow ideas. The reviewed checkout had no declared LICENSE, so its
+source, assets and derived director skill are not included in this release.
+Cascadeur MCP is not a repackaging of that repository.
+
+The official MCP Python SDK and pytest are installed as dependencies through
+`pyproject.toml`, not vendored into this repository. Their installed distributions
+retain their own license notices. Python and Cascadeur must be installed
+separately; this project's MIT license does not relicense them or their assets.

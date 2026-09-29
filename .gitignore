@@ -1,4 +1,6 @@
 # Dependencies, Python tooling and generated output
+/publish-review/
+/.publish/
 .venv/
 venv/
 __pycache__/
