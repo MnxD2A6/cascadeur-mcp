@@ -25,6 +25,10 @@ MCP client → official MCP Python SDK (stdio)
 
 **Alpha research prototype, not a general production animation SDK.** Local
 development validation used Windows, Cascadeur 2026.2.2 and Python 3.12.
+**Validation has only been performed on the developer's local machine.
+Cascadeur host connection on other machines has NOT been verified.** A clean
+virtual-environment installation test on that same machine does not establish
+cross-machine host compatibility.
 The external package requires Python 3.10+ and the official MCP Python SDK v1.
 Other operating systems, Cascadeur releases and arbitrary character rigs have
 not been validated. MCP protocol compatibility is not client acceptance testing.
