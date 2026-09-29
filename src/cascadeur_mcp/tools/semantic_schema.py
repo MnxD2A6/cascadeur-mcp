@@ -32,7 +32,7 @@ DESCRIPTIONS = {
  'get_rig_semantics':'Discover and validate Cascy v1 role groups, native Point UUIDs, rig bindings and topology fingerprint. Driven joints are read-only. Refuses ambiguous names or unsupported topology.',
  'get_semantic_pose':'Read 11 role groups of named native Point targets in world scene units, plus read-only joint states. Returned pose is writable without knowing joint UUIDs.',
  'set_semantic_pose':'Patch named role/slot world-position targets in one native transaction; omitted slots retain the target frame values. Preserves rig constraints. Read solver-adjusted result; timeout means unknown outcome.',
- 'set_pose_sequence':'Atomically write 1-8 unique existing frames of semantic Point targets in ONE MCP call / ONE native transaction. Every patch merges with pre-transaction state at its frame. Any failure rolls back the whole sequence; no timeline extension.',
+ 'set_pose_sequence':'Write 1-8 unique existing frames of semantic Point targets in ONE MCP call / ONE checked native transaction. Patches merge with pre-transaction state. Failure checks restoration; unverified recovery locks further writes. No timeline extension. Read back after timeout.',
 }
 
 def validate_pose(pose):

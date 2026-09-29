@@ -4,6 +4,7 @@ import argparse
 import asyncio
 import importlib.metadata
 import json
+import os
 import sys
 from datetime import datetime, timezone
 from pathlib import Path
@@ -16,7 +17,8 @@ async def smoke():
     report = {"time_utc": datetime.now(timezone.utc).isoformat(),
               "sdk_version": importlib.metadata.version("mcp"),
               "client": "official Python SDK (not Codex)", "calls": []}
-    params = StdioServerParameters(command=sys.executable, args=["-m", "cascadeur_mcp.server"])
+    params = StdioServerParameters(command=sys.executable, args=["-m", "cascadeur_mcp.server"],
+        env={"CASCADEUR_MCP_INSTANCE": os.environ.get("CASCADEUR_MCP_INSTANCE", "c01")})
     async with stdio_client(params) as (read, write):
         async with ClientSession(read, write) as session:
             init = await session.initialize()

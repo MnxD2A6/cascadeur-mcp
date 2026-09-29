@@ -133,7 +133,25 @@ def restore(view,scene,cid,path):
             raise BridgeError('DURABLE_POSE_MISMATCH: rig did not reproduce saved joint state; transaction must roll back')
         if not character.equivalent(actual['pose'],native):
             raise BridgeError('DURABLE_CONTROL_MISMATCH: saved native Point state not reproduced')
-    result=character.set_sequence(view,scene,cid,[{'frame':frame,'pose':native}],postcondition=verify)
+    # v1 already stores every finger's local rotation in reference_joints. Body
+    # Point targets alone cannot restore these independently animated channels.
+    from . import hands
+    finger_links=hands.bindings(scene,cid)
+    def restore_fingers(editor,updater):
+        import csc
+        changed=set()
+        for group in finger_links.values():
+            for obj,did in group.values():
+                q=payload['reference_joints'][obj.to_string()]['local']['rotation_wxyz']
+                editor.data_editor().set_data_value(did,frame,csc.math.Rotation.from_quaternion(*q))
+                changed.add(did)
+        updater.run_update(changed,frame)
+        ip=updater.get_interpolator();ip.reload();ip.interpolate()
+    # Restoring a pose does not authorize resetting the entire clip to LINEAR.
+    # Existing interpolation/weights are retained; key insertion remains native.
+    result=character.set_sequence(view,scene,cid,[{'frame':frame,'pose':native}],postcondition=verify,
+                                  configure_tracks=lambda editor,layers:None,
+                                  after_interpolation=restore_fingers)
     result.pop('native_poses')
     return {**result,'restored':True,'path':str(path),'sha256':checksum,'frame':frame,
             'scope':'single-key-pose','joints_verified':len(current['joints']),

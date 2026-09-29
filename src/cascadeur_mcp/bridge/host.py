@@ -11,9 +11,13 @@ import threading
 import time
 import uuid
 
-from .protocol import (BridgeError, ID, check_path, read_json, runtime_dir,
+from .protocol import (BridgeError, ID, METHODS, check_path, read_json, runtime_dir,
                        validate_request, write_json)
 from .permissions import make_private
+from .errors import describe_error
+from . import compatibility
+from ..tools.animation_schema import WRITE_METHODS
+from .. import __version__  # Frozen by package import in this host process.
 
 _bridge = None
 
@@ -24,6 +28,9 @@ def dispatch(method, params):
     app = csc.app.get_application()
     if app is None:
         raise BridgeError("NO_APPLICATION: csc returned no application")
+    if method == 'get_bridge_capabilities':
+        from .capabilities import describe
+        return describe()
     if method == "ping_cascadeur":
         return {"host": "Cascadeur", "pid": os.getpid(), "python": sys.version,
                 "thread_id": threading.get_ident(), "live_application": True}
@@ -68,7 +75,9 @@ class HostBridge:
         if (self.root / "session.json").exists():
             raise BridgeError("SESSION_EXISTS: stop the existing bridge; verify stale PID before cleanup")
         write_json(self.root / "session.json", {"session": self.session, "token": self.token,
-                                               "pid": os.getpid(), "protocol": 1})
+                                               "pid": os.getpid(), "protocol": 1,
+                                               "bridge_package_version": __version__,
+                                               "write_contract": compatibility.describe()})
 
     def tick(self):
         try:
@@ -95,18 +104,31 @@ class HostBridge:
                 raise BridgeError("INVALID_FILENAME: unexpected request filename")
             response = self.folder / (rid + ".response.json")
             envelope = {"id": rid, "session": self.session}
+            method = 'unknown'
+            phase = 'host_validation'
+            completed = False
             try:
-                method, params = validate_request(read_json(request), self.session, self.token, rid)
+                raw = read_json(request)
+                candidate = raw.get('method')
+                if isinstance(candidate, str) and candidate in METHODS:
+                    method = candidate  # Classify rejected write requests conservatively.
+                method, params = validate_request(raw, self.session, self.token, rid)
                 if rid in self.seen:
                     raise BridgeError("DUPLICATE_REQUEST: already handled")
                 if len(self.seen) >= 10000:
                     raise BridgeError("SESSION_LIMIT: restart bridge after 10000 requests")
                 self.seen.add(rid)
+                phase = 'host_dispatch'
                 result = dispatch(method, params)
+                completed = True
+                phase = 'host_result'
                 write_json(response, {**envelope, "ok": True, "result": result})
             except Exception as exc:
+                details = describe_error(exc, operation=method, is_write=method in WRITE_METHODS,
+                                         phase=phase, completed=completed)
                 write_json(response, {**envelope, "ok": False,
-                                      "error": type(exc).__name__ + ": " + str(exc)})
+                                      "error": details['code'] + ': ' + details['message'],
+                                      "error_details": details})
             finally:
                 request.unlink(missing_ok=True)
         # Late responses are bounded to this private session and expire after one minute.

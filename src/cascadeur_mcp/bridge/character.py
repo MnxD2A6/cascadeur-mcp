@@ -248,7 +248,9 @@ def journal(scene):
     key=id(scene)
     if key not in _journals: _journals[key]={'scene':scene,'entries':[],'locked':False}
     j=_journals[key]
-    if j['locked']: raise BridgeError('RECOVERY_REQUIRED: prior rollback could not be verified')
+    if j['locked']:
+        raise BridgeError('RECOVERY_REQUIRED: prior rollback could not be verified',
+                          execution_state='recovery_required',rollback_verified=False)
     return j
 
 
@@ -289,6 +291,38 @@ def restore_native(scene,snap,known_states):
 def _write_point(editor,did,frame,value):
     import numpy as np
     editor.data_editor().set_data_value(did,frame,np.asarray(value,dtype=np.float32))
+
+
+def _verify_committed(scene,snapshot,verify,callback_state):
+    """Validate synchronous native commit before admitting it to the journal.
+
+    LayersEditor change_section may finalize only when modify_update returns.
+    No event-loop yield is allowed between that return and this readback. On a
+    failed postcondition, traverse only the states observed in this transaction.
+    Callers must still verify recovery and lock the journal on recovery failure.
+    """
+    committed_state=capture(scene)
+    try:
+        return verify()
+    except Exception:
+        restore_native(scene,snapshot,[snapshot['state'],callback_state,committed_state])
+        raise
+
+
+def _transaction_failure(scene,before,transaction_journal,exc,snapshot_id,code):
+    """Attach state evidence only after capture succeeds and equality is checked."""
+    restored=False
+    recovery_error=None
+    try:
+        restored=equivalent(capture(scene),before)
+    except Exception as recovery_exc:
+        recovery_error=type(recovery_exc).__name__
+    if not restored:
+        transaction_journal['locked']=True
+    return BridgeError(code+': '+str(exc)+'; rollback_verified='+str(restored)+
+                       '; recovery_error='+str(recovery_error)+'; snapshot_id='+snapshot_id,
+                       execution_state='rolled_back' if restored else 'recovery_required',
+                       rollback_verified=restored,recovery_snapshot_id=snapshot_id)
 
 
 def set_pose(view,scene,cid,frame,pose):
@@ -394,7 +428,8 @@ def set_sequence(view,scene,cid,entries,postcondition=None,configure_tracks=None
         committed=scene.modify_update('C01: atomic character Point sequence',modify) is True
         if not committed or mutation['callback_error']:
             raise BridgeError('NATIVE_MODIFY_FAILED: '+str(mutation['callback_error']))
-        poses,adjustments,worst,after_state,metrics=mutation['verified']
+        poses,adjustments,worst,after_state,metrics=_verify_committed(
+            scene,_snapshots[snapshot['snapshot_id']],verify,mutation['verified'][3])
         j['entries'].append({'id':uuid.uuid4().hex,'before':before,'after':after_state})
         return {'scene_id':scene_id(view),'character_id':cid,'native_poses':poses,
             'snapshot_id':snapshot['snapshot_id'],'joints_read':len(joints),'controls_written':len(controls)*len(entries),
@@ -404,16 +439,7 @@ def set_sequence(view,scene,cid,entries,postcondition=None,configure_tracks=None
             'max_target_adjustment':worst,
             'host_elapsed_ms':(time.perf_counter()-started)*1000}
     except Exception as exc:
-        recovery_error=None
-        restored=False
-        try:
-            restored=equivalent(capture(scene),before)
-            if not restored:
-                raise BridgeError('NATIVE_ROLLBACK_MISMATCH: transaction failure did not restore prior state')
-        except Exception as recovery_exc: recovery_error=str(recovery_exc)
-        if not restored: j['locked']=True
-        raise BridgeError('CHARACTER_POSE_FAILED: '+str(exc)+'; rollback_verified='+str(restored)+
-                          '; real_writes='+str(mutation['writes'])+'; recovery_error='+str(recovery_error)+'; snapshot_id='+snapshot['snapshot_id']) from exc
+        raise _transaction_failure(scene,before,j,exc,snapshot['snapshot_id'],'CHARACTER_POSE_FAILED') from exc
 
 
 def restore(view,scene,sid):
@@ -433,11 +459,19 @@ def restore(view,scene,sid):
             raise BridgeError('EXTERNAL_EDIT_DETECTED: state changed outside C01')
         states=[s for e in j['entries'][len(prefix):] for s in (e['before'],e['after'])]
         try: steps=restore_native(scene,snap,states)
-        except Exception:
+        except Exception as exc:
             j['locked']=True
-            raise
+            raise BridgeError('RESTORE_FAILED: '+str(exc),execution_state='recovery_required',
+                              rollback_verified=False,recovery_snapshot_id=sid) from exc
         del j['entries'][len(prefix):]
-    if not equivalent(capture(scene),snap['state']): raise BridgeError('SNAPSHOT_STATE_MISMATCH: external edit detected')
+    try:
+        if not equivalent(capture(scene),snap['state']):
+            raise BridgeError('SNAPSHOT_STATE_MISMATCH: external edit detected')
+    except Exception as exc:
+        j['locked']=True
+        raise BridgeError('SNAPSHOT_STATE_MISMATCH: restore could not be verified',
+                          execution_state='recovery_required',rollback_verified=False,
+                          recovery_snapshot_id=sid) from exc
     return {'scene_id':scene_id(view),'scene_name':view.name(),'character_id':snap['character_id'],
             'snapshot_id':sid,'restored':True,'transactions_undone':undone,'native_undo_actions':steps,'frames_verified':snap['state']['count']}
 

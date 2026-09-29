@@ -13,6 +13,7 @@ every current Cascadeur version has been tested.
 | `skeleton.py` | Parent hierarchy, local/global Transform data and layer key guards; isolated FK subtree |
 | `character.py`, `semantics.py` | RigInfo/RigAdditionalInfo relationships, Point global-position targets, native solve/readback; Cascy profile |
 | `durable.py` | Original JSON format with integrity/identity guards; one-pose restore |
+| `hands.py` | Validated finger parent chains and animated Transform.local_rotation, native data editor and updater; Cascy only |
 | `playback.py` | Native `Timeline.Play` action, bounded frame observation and explicit stop verification |
 | `polish.py` | Native layer keys/interpolation weights, scene-copy saving and bounded retiming; no arbitrary action execution |
 | `fbx_export.py` | Application export entitlement and installed FbxLoader methods, scene-copy guard, full-range export |
@@ -33,6 +34,22 @@ not included here. No vendor code is copied into this source distribution.
 The automated suite checks input handling and adapter contracts, including an
 explicitly synthetic semantic topology fixture. A passing suite does not certify
 native solver behavior, licensing, visual fidelity, or production suitability.
+
+## Hand channels and commit ordering (local verification, 2026-09-30)
+
+The installed `ml/editable_animation.py` example's `SetPositions` path writes a
+Local Rotation data node and runs the scene updater. The adapter uses the
+existing `Rotation.from_quaternion`, data-editor writes and `run_update` APIs.
+Actual Cascy tests established independent finger writes, both-hand batching,
+body-state preservation, native Undo and save/reload. No installed vendor file
+or character preset is copied here.
+
+Actual full-state captures also showed that LayersEditor section edits can
+finalize after a `Scene.modify_update` callback returns. The old journal captured
+the pre-commit interpolation value. The adapter now repeats validation after
+commit before recording history. Durable restore no longer resets all intervals
+to Linear. Real restoration returned all 23 tested frames and tracks to their
+recorded state; no tolerance or external-edit guard was relaxed.
 
 ## Third-party code and attribution
 

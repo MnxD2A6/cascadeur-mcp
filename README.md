@@ -11,13 +11,21 @@ MCP client → official MCP Python SDK (stdio)
 
 ## Features
 
+- `get_bridge_capabilities`: read the responding host's loaded bridge version,
+  operation classifications, limits and restrictions without probing a rig or license.
+- Structured execution errors alongside the existing text and MCP error flag,
+  including unknown write outcomes and explicitly verified recovery states.
+- Bilateral write-contract checks: outdated or incompatible peers cannot write;
+  existing read-only diagnostics remain usable with older protocol-1 hosts.
 - Scene/object inspection, frame access, and bounded Joint transform operations.
 - Character skeleton inspection and a validated Cascy semantic rig profile.
 - Named pelvis, chest, head, hand, elbow, foot and knee controls. Rig Point
   targets are writable; driven Joint transforms remain read-only in this profile.
 - `set_pose_sequence`: up to eight existing frames in one checked transaction,
-  with automatic rollback on failure.
+  with guarded rollback attempts and explicit recovery-required errors.
 - Session snapshots and a durable, single-pose JSON snapshot format.
+- Validated Cascy finger-local read/write channels through `get_hand_pose` and
+  `set_hand_pose_sequence`; hand Point targets alone do not make a fist.
 - Native playback observation, bounded retiming, scene-copy saving and FBX
   export with a native license-entitlement check.
 
@@ -25,6 +33,7 @@ MCP client → official MCP Python SDK (stdio)
 
 **Alpha research prototype, not a general production animation SDK.** Local
 development validation used Windows, Cascadeur 2026.2.2 and Python 3.12.
+Current source release: `0.5.0a3` (Alpha).
 **Validation has only been performed on the developer's local machine.
 Cascadeur host connection on other machines has NOT been verified.** A clean
 virtual-environment installation test on that same machine does not establish
@@ -33,8 +42,9 @@ The external package requires Python 3.10+ and the official MCP Python SDK v1.
 Other operating systems, Cascadeur releases and arbitrary character rigs have
 not been validated. MCP protocol compatibility is not client acceptance testing.
 
-Cascadeur must be installed and running, with a compatible scene open. FBX
-export requires an eligible license. This repository contains no Cascadeur
+Cascadeur must be installed and running. Scene-dependent tools require a
+compatible open scene; ping and capability discovery do not. FBX export requires
+an eligible license. This repository contains no Cascadeur
 binaries, API stubs, character assets, game files, reference videos or audio.
 Obtain any required assets directly from their owners under their own terms.
 
@@ -53,28 +63,37 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -m pytest -q
 ```
 
-Install the host hook separately:
+Install the host hook separately. Save scenes and close Cascadeur normally.
+Replace the example installation path, preview, then apply:
 
-1. Close Cascadeur normally after saving your scenes.
-2. Copy `cascadeur_scripts/c01_startup.py` to
-   `<Cascadeur>/resources/scripts/python/events/application_started/c01_startup.py`.
-   Do not overwrite an unrelated existing script.
-3. In that installed copy, replace `"__C01_PROJECT_SOURCE__"` with a Python
-   string literal for this checkout's absolute `src` directory. Generate the
-   correctly escaped value from the checkout root with:
+```powershell
+$cascadeurHome = 'D:\Apps\Cascadeur' # your actual Cascadeur installation
+.\.venv\Scripts\python.exe -m cascadeur_mcp.manage install-host --cascadeur-home $cascadeurHome
+.\.venv\Scripts\python.exe -m cascadeur_mcp.manage install-host --cascadeur-home $cascadeurHome --apply
+```
 
-   ```powershell
-   .\.venv\Scripts\python.exe -c "from pathlib import Path; print(repr(str(Path('src').resolve())))"
-   ```
+This generates the source path safely and creates only the documented startup
+hook. An existing different hook returns `HOOK_CONFLICT` and remains untouched;
+there is no force overwrite. Write access may require administrator permissions.
+Then start Cascadeur and open a scene. The hook schedules the bridge on
+Cascadeur's Qt main thread. Check the connection:
 
-   Paste the entire printed quoted value after `PROJECT_SOURCE =`. The
-   Cascadeur installation directory may require administrator write access.
-4. Start Cascadeur and wait for startup to complete. The hook schedules the
-   bridge on Cascadeur's Qt main thread.
+```powershell
+.\.venv\Scripts\python.exe -m cascadeur_mcp.manage doctor --live
+```
+
+See [installation and diagnostics](docs/INSTALL_AND_DOCTOR.md) for instances,
+error codes, static checks, and exact-match uninstall. Without `--apply`, hook
+maintenance commands only preview. Without `--live`, doctor sends no requests.
 
 Do not install the external MCP SDK or a replacement Qt runtime into Cascadeur.
+When upgrading, save scenes and exit Cascadeur normally, update the package, then
+restart both Cascadeur and the external MCP server. A cached old host or client
+will be refused for writes. The write contract compares protocol, semantic
+revision and write schemas; matching package version strings alone are not proof
+of compatibility. See [capabilities and errors](docs/CAPABILITIES_AND_ERRORS.md).
 Keep the checkout at the configured path. An application update may require
-reinstalling the hook. To uninstall, close Cascadeur and remove only this hook.
+reinstalling the hook. Close Cascadeur before using `uninstall-host --apply`.
 
 ## Usage
 
@@ -106,16 +125,28 @@ alone does not provide a running Cascadeur host.
 
 A typical editing sequence is:
 
-1. `ping_cascadeur()` and `get_scene_info()` to verify the live host.
+1. `get_bridge_capabilities()` to read the loaded host contract, then
+   `ping_cascadeur()` and `get_scene_info()` to check the host and active scene.
 2. `list_characters()` to discover current scene and character IDs.
 3. `get_rig_semantics(character_id)` and `get_semantic_pose(character_id, frame)`.
-4. Save a native scene copy, then submit the named Point targets through
-   `set_pose_sequence(scene_id, character_id, poses)`.
+4. Save a native scene copy and rediscover its scene ID, then submit the named
+   Point targets through `set_pose_sequence(scene_id, character_id, poses)`.
 5. Read the solved results and inspect real playback before accepting changes.
 
 Discover full signatures with MCP `tools/list`; do not reuse stale IDs or assume
 that every tool accepts the same arguments. A semantic `direction`, `orientation`
 or `bend` value is a world-position Point target, not an Euler rotation.
+
+Capability `read`/`write` classifications describe supported operation contracts,
+not current execution readiness. Scene, rig, track and license checks remain
+`NOT_EVALUATED`; the Cascadeur application version is `NOT_REPORTED`. See
+[capabilities and structured errors](docs/CAPABILITIES_AND_ERRORS.md) for the
+loaded-host contract, error fields and conservative handling of older hosts.
+
+Finger input uses local unit quaternions `[w,x,y,z]` and named finger segments,
+not those world-position targets. Read [hand controls](docs/HAND_CONTROLS.md)
+before editing. There is no universal `fist` preset or automatic motion generator.
+For connection failures, use [troubleshooting](docs/TROUBLESHOOTING.md).
 
 ## Safety and limitations
 
@@ -131,7 +162,14 @@ or `bend` value is a world-position Point target, not an Euler rotation.
   session limit, save and restart; do not bypass the guard.
 - Durable JSON snapshots restore one pose, not an entire animation. Use native
   `.casc` copies for full-scene recovery. Avoid concurrent manual/agent editing.
-- A write timeout is an unknown outcome. Read back before retrying.
+- A write timeout is an unknown outcome. Read back before retrying; structured
+  errors never authorize automatic retries.
+- `rolled_back` requires explicit verified restoration. `recovery_required`
+  means stop writes and inspect or recover the preserved scene. Not every
+  adapter proves rollback, and error text alone is not recovery evidence.
+- Character transaction journals are checked after native commit. Durable pose
+  restoration preserves existing interpolation settings; it is still a single
+  pose operation and can recompute adjacent interpolation.
 - FBX export currently accepts the full stored range of one supported character.
   It saves a new native copy first. Replacing an existing FBX requires its SHA-256.
 - AutoPhysics/AutoPosing automation, arbitrary rigs, headless Cascadeur and a
@@ -143,6 +181,10 @@ or `bend` value is a world-position Point target, not an Euler rotation.
 protocol, validation and recovery-related guards. Its semantic fixture uses
 invented IDs and no geometry or vendor scene data. These tests are **not** a
 substitute for real Cascadeur playback, export or visual animation validation.
+A local native acceptance check exercised capability discovery, preflight
+rejection, a verified rollback after an unachievable hand target, and a later
+semantic write/restore. See the [recorded scope](docs/CAPABILITIES_AND_ERRORS.md#verification-status);
+this does not establish recovery for every adapter or connection on another machine.
 
 Local development experiments have exercised real character editing, playback
 and FBX/Unity round trips. Private captures, scene dumps and game/reference

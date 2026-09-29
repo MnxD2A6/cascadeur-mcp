@@ -78,6 +78,9 @@ def dispatch(view, scene, method, params):
     from ..tools.animation_schema import WRITE_METHODS
     if method in WRITE_METHODS:
         playback.require_idle()
+    if method in ('get_hand_pose','set_hand_pose_sequence'):
+        from . import hands
+        return hands.dispatch(view,scene,method,params)
     if method=='export_fbx':
         from .fbx_export import export
         return export(view,scene,params)
@@ -97,7 +100,8 @@ def dispatch(view, scene, method, params):
     if method in skeleton.METHODS or (method == 'get_pose' and 'root' in params):
         return skeleton.dispatch(view,scene,method,params)
     if 'scene' in params and view.name() != params['scene']:
-        raise BridgeError('SCENE_MISMATCH: active scene differs from expected scene; no changes made')
+        raise BridgeError('SCENE_MISMATCH: active scene differs from expected scene; no changes made',
+                          execution_state='not_started')
     if method == 'get_current_frame':
         return frame_info(view, scene)
     frame = params.get('frame', scene.get_current_frame())

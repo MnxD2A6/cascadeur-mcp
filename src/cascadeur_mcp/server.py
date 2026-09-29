@@ -8,6 +8,8 @@ from mcp.server import Server
 from mcp.server.stdio import stdio_server
 
 from .bridge.client import BridgeClient
+from .bridge.protocol import validate_params, BridgeError, METHODS
+from .bridge.errors import describe_error
 from .tools.animation_schema import SCHEMAS, DESCRIPTIONS, WRITE_METHODS
 
 server = Server("cascadeur-mcp-c01")
@@ -18,6 +20,8 @@ async def list_tools():
     empty = {"type": "object", "properties": {}, "additionalProperties": False}
     readonly = types.ToolAnnotations(readOnlyHint=True, destructiveHint=False, openWorldHint=False)
     return [
+        types.Tool(name='get_bridge_capabilities', description='Read contracts from the actual loaded host; runtime rig and license preconditions remain unevaluated.',
+                   inputSchema=empty, annotations=readonly),
         types.Tool(name="ping_cascadeur", description="Confirm a live response from the Cascadeur host bridge.",
                    inputSchema=empty, annotations=readonly),
         types.Tool(name="get_scene_info", description="Read current Cascadeur scene name, frame and object count.",
@@ -33,15 +37,30 @@ async def list_tools():
          for name, spec in SCHEMAS.items()]
 
 
-@server.call_tool()
+@server.call_tool(validate_input=False)
 async def call_tool(name, arguments):
+    phase, completed = 'client_validation', False
     try:
-        result = await asyncio.to_thread(BridgeClient().call, name, arguments)
+        # The same strict allowlist validator runs again at the host. Handling it
+        # here keeps SDK input errors within our structured error contract.
+        arguments = validate_params(name, {} if arguments is None else arguments)
+        phase = 'client_session'
+        client = BridgeClient()
+        # Unwrapped failures during a call cannot prove that publication failed.
+        phase = 'client_publish'
+        result = await asyncio.to_thread(client.call, name, arguments)
+        phase, completed = 'client_response', True
         return types.CallToolResult(content=[types.TextContent(type="text", text=json.dumps(result))],
                                     structuredContent=result, isError=False)
     except Exception as exc:
-        return types.CallToolResult(content=[types.TextContent(
-            type="text", text=type(exc).__name__ + ": " + str(exc))], isError=True)
+        known = isinstance(name, str) and name in METHODS
+        details = (exc.details if isinstance(exc, BridgeError) and exc.details is not None else
+                   describe_error(exc, operation=name if known else 'unknown',
+                                  is_write=known and name in WRITE_METHODS,
+                                  phase=phase, completed=completed))
+        return types.CallToolResult(content=[types.TextContent(type='text',
+            text=details['code'] + ': ' + details['message'])],
+            structuredContent={'error': details}, isError=True)
 
 
 async def run():

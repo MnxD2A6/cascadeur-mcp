@@ -92,11 +92,19 @@ SCHEMAS.update(export_schema.SCHEMAS)
 DESCRIPTIONS.update(export_schema.DESCRIPTIONS)
 WRITE_METHODS.add('export_fbx')
 
+from . import hand_schema
+SCHEMAS.update(hand_schema.SCHEMAS)
+DESCRIPTIONS.update(hand_schema.DESCRIPTIONS)
+WRITE_METHODS.add('set_hand_pose_sequence')
+
 
 def validate(method, params):
     spec = SCHEMAS[method]
     if set(params) - set(spec['properties']) or set(spec['required']) - set(params):
         raise ValueError('unexpected or missing fields')
+    if method in hand_schema.SCHEMAS:
+        hand_schema.validate(method,params)
+        return dict(params)
     if method in export_schema.SCHEMAS:
         export_schema.validate(method,params)
         return dict(params)

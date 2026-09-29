@@ -84,6 +84,7 @@ def build_map(skeleton):
     return {'profile':'cascy-points-v1','character_id':skeleton['character_id'],
             'scene_id':skeleton['scene_id'],'fingerprint':fingerprint,'roles':roles,
             'coordinate_space':'world positions in native scene units',
+            'hand_shape_note':'Hand Point targets move/orient the palm; they do not curl fingers. Use get_hand_pose and set_hand_pose_sequence for verified Cascy finger-local channels.',
             'identity_scope':'UUIDs within saved rig; names plus native relationships validate profile; import/regeneration requires rediscovery',
             'unbound_helper_policy':'foot heel Self0: unique exact name, Point type and RigInfo membership; no invented box reference'}
 

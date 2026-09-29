@@ -22,9 +22,11 @@ def test_stdio_schema_and_absent_host(tmp_path):
                 assert {"ping_cascadeur", "get_scene_info", "get_objects"} <= {t.name for t in tools}
                 missing = await session.call_tool("ping_cascadeur", {})
                 assert missing.isError and "BRIDGE_UNAVAILABLE" in missing.content[0].text
+                assert missing.structuredContent['error']['execution_state'] == 'not_started'
                 for args in [{"limit": True}, {"limit": 201}, {"code": "anything"}]:
                     invalid = await session.call_tool("get_objects", args)
                     assert invalid.isError
+                    assert invalid.structuredContent['error']['code'] == 'INVALID_PARAMS'
                     assert "BRIDGE_UNAVAILABLE" not in invalid.content[0].text
                 unknown = await session.call_tool("execute_python", {"code": "anything"})
                 assert unknown.isError

@@ -7,16 +7,14 @@ import re
 import time
 import uuid
 from pathlib import Path
-from ..tools.animation_schema import SCHEMAS, validate as validate_animation
+from ..tools.animation_schema import SCHEMAS, WRITE_METHODS, validate as validate_animation
+from .errors import BridgeError
+from . import compatibility
 
 MAX_BYTES = 262144
 ID = re.compile(r"[0-9a-f]{32}\Z")
 TOKEN = re.compile(r"[0-9a-f]{64}\Z")
-METHODS = {"ping_cascadeur", "get_scene_info", "get_objects"} | set(SCHEMAS)
-
-
-class BridgeError(RuntimeError):
-    """An explicit, client-visible failure."""
+METHODS = {"ping_cascadeur", "get_scene_info", "get_objects", "get_bridge_capabilities"} | set(SCHEMAS)
 
 
 def runtime_dir():
@@ -92,7 +90,8 @@ def validate_params(method, params):
 
 
 def validate_request(data, session, token, filename_id):
-    if set(data) != {"version", "id", "session", "token", "expires_at", "method", "params"}:
+    fields = {"version", "id", "session", "token", "expires_at", "method", "params"}
+    if set(data) not in (fields, fields | {'write_contract'}):
         raise BridgeError("INVALID_REQUEST: unexpected or missing fields")
     if type(data["version"]) is not int or data["version"] != 1:
         raise BridgeError("INVALID_VERSION: expected protocol 1")
@@ -107,4 +106,7 @@ def validate_request(data, session, token, filename_id):
         raise BridgeError("INVALID_EXPIRY: expected a finite timestamp")
     if not time.time() < expiry <= time.time() + 30:
         raise BridgeError("EXPIRED_REQUEST: deadline expired or exceeds 30 seconds")
-    return data["method"], validate_params(data["method"], data["params"])
+    params = validate_params(data['method'], data['params'])
+    if data['method'] in WRITE_METHODS and compatibility.status(data.get('write_contract')) != 'COMPATIBLE':
+        raise BridgeError('INCOMPATIBLE_CLIENT: update and restart the MCP client and host together')
+    return data['method'], params
