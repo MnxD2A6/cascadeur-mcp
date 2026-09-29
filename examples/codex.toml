@@ -1,0 +1,8 @@
+# Sample only. Replace command with the absolute path to the installed virtualenv.
+# Official configuration: https://developers.openai.com/codex/mcp
+[mcp_servers.cascadeur_c01]
+command = 'C:\absolute\path\to\cascadeur-mcp\.venv\Scripts\python.exe'
+args = ["-m", "cascadeur_mcp.server"]
+startup_timeout_sec = 15
+tool_timeout_sec = 15
+enabled_tools = ["ping_cascadeur", "get_scene_info", "get_objects"]
