@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.5.0a7 — local candidate, not published
+
+- Add `edit_impact` to successful curve-preserving offsets. Group actual Point
+  displacement and error against requested targets by semantic role/slot.
+- Separate directly written groups, unselected solver-coupled groups and small
+  changes below an explicit reporting threshold. Small does not mean unchanged.
+- Build the report inside transaction verification and replace it after native
+  commit. Reporting failures follow existing checked recovery, not late errors
+  after an unverified write. No additional native reads are added for reporting.
+- Advertise report support in the responding host's existing write feature.
+  Write schemas/revision and ordinary writing behavior are unchanged; capability
+  discovery, not the matching write hash, establishes optional report support.
+
+Local Polished-Cascy acceptance independently checked eleven roles and 43 Point
+slots at each of three edited keys, including unselected right-forearm coupling.
+A reporting fault after native commit verified full-scene rollback; a later edit,
+continuous playback and restoration passed. Regression: 455 passed, one Windows
+symlink-permission skip. These results do not certify animation visual quality,
+other curve modes or a second machine's host connection.
+
 ## 0.5.0a6 — 2026-10-01 (Alpha)
 
 - Add `offset_semantic_pose_sequence_preserving_curves`, a separate existing-key

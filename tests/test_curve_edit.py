@@ -157,20 +157,29 @@ def test_semantic_write_delegates_only_selected_channels_and_no_layer_edits(monk
     monkeypatch.setattr(character_schema,'validate',lambda params:None)
     monkeypatch.setattr(semantics,'get_pose',lambda *args,**kwargs:{'actual_solved':True})
     def write(view,scene,cid,entries,**kwargs):
-        calls.append((entries,kwargs));return {'native_poses':[],'snapshot_id':'c'*32}
+        calls.append((entries,kwargs))
+        poses=[{'frame':e['frame'],'pose':copy.deepcopy(e['pose'])} for e in entries]
+        # Native set_sequence checks before and after commit. Do not suppress
+        # mandatory verification with a partial transaction double.
+        kwargs['postcondition']({},poses)
+        poses[-1]['pose']['h1']['position'][1]+=.01
+        kwargs['postcondition']({},poses)
+        return {'native_poses':poses,'snapshot_id':'c'*32}
     monkeypatch.setattr(character,'set_sequence',write)
     result=semantics.dispatch(None,None,METHOD,PARAMS)
     assert len(calls)==1
     entries,kwargs=calls[0]
     assert kwargs['write_control_ids']=={'h1','h2'}
     assert kwargs['preserve_existing_keys'] is True
-    assert kwargs['postcondition'] is guard.verify
+    assert callable(kwargs['postcondition'])
     assert 'configure_tracks' not in kwargs
     assert [e['frame'] for e in entries]==[6,10]
     for entry in entries:
         assert entry['pose']['unselected']==baseline['unselected']
         assert entry['pose']['h1']['position']==[.95,2.,3.]
     assert result['curve_preservation']['verified'] is True
+    assert result['edit_impact']['frames'][-1]['direct_roles']['right_hand']['slots']['center']['target_error']==pytest.approx(.01)
+    assert result['edit_impact']['protection']['verified'] is True
     failure=BridgeError('CHARACTER_POSE_FAILED',execution_state='rolled_back',rollback_verified=True)
     def fail(*args,**kwargs): raise failure
     monkeypatch.setattr(character,'set_sequence',fail)

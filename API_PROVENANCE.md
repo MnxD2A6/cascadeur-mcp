@@ -1,5 +1,27 @@
 # API provenance and verification scope
 
+## Semantic edit-impact reports (local verification, 2026-10-01)
+
+The `0.5.0a7` candidate introduces no Cascadeur API. It derives Point movements
+from the pre-edit targets already read by semantic offsets and native poses
+already collected by `character.set_sequence` verification. RigInfo-validated
+role/slot mapping supplies labels; no list index or guessed relationship is used.
+Reports are built during both transaction checks; only the post-commit report is
+returned. Existing whole-scene capture, curve checks and checked Undo remain.
+
+Actual official-SDK calls on the local 23-frame Polished Cascy clip edited three
+right-hand keys. Independent native reads checked all eleven semantic roles and
+43 Point slots per requested frame. The report identified the unselected
+right-elbow/forearm Point coupling. A private test observer deliberately failed
+report generation on the second check, after native commit; checked native
+rollback restored the entire captured clip and structure. A subsequent real
+edit, continuous playback and restoration also succeeded. No vendor scene or
+observer is included here. Unit tests alone do not establish these results.
+
+This scope covers native Point world positions at edited frames, not Joint
+rotations, every trajectory, visual quality, other machines or additional curve
+modes. The report grouping threshold does not change existing safety tolerances.
+
 The original adapters were developed against the official Cascadeur Python API,
 the locally installed 2026.2.2 interfaces, and separate live tests. Installed
 vendor modules/stubs and native character resources are not redistributed.

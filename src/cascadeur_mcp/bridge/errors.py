@@ -7,6 +7,7 @@ PHASES = {'client_validation', 'client_session', 'client_publish', 'client_respo
 ID = re.compile(r'[0-9a-f]{32}\Z')
 CODE = re.compile(r'[A-Z][A-Z0-9_]{1,63}\Z')
 MESSAGES = {
+    'EDIT_IMPACT_UNAVAILABLE': 'Native edit-impact evidence could not be produced; inspect transaction recovery evidence.',
     'CURVE_KEY_REQUIRED': 'Choose frames that already have keys on the edited tracks; no keys were added.',
     'CURVE_STATE_UNAVAILABLE': 'Required curve, additive or cycle state could not be verified; no edit started.',
     'UNSUPPORTED_ADDITIVE_LAYERS': 'This edit cannot safely restore an additive layer stack; no edit started.',

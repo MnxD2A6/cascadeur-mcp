@@ -7,6 +7,7 @@ import hashlib
 import json
 from . import character
 from .protocol import BridgeError
+from .edit_impact import build as build_edit_impact
 from ..tools.semantic_schema import SLOTS
 
 JOINTS = {'pelvis':'pelvis','chest':'chest','head':'head'}
@@ -150,8 +151,10 @@ def offset_sequence(view,scene,params,*,preserve_curves=False):
                         for c in rig['roles'][role]['controls'].values()}
             guard=curve_edit.preflight(scene,cid,params['frames'],edited_ids)
         entries=[]
+        baselines={}
         for frame in params['frames']:
             old=character.get_pose(view,scene,cid,frame,joint_ids=set())['pose']
+            if preserve_curves: baselines[frame]=old
             patch={role:{slot:[old[c['control_id']]['position'][i]+delta[i] for i in range(3)]
                          for slot,c in rig['roles'][role]['controls'].items()}
                    for role,delta in params['offsets'].items()}
@@ -165,10 +168,16 @@ def offset_sequence(view,scene,params,*,preserve_curves=False):
         raise BridgeError(message,execution_state='not_started') from exc
     # No catch around the transaction: preserve verified rollback/recovery errors.
     if preserve_curves:
-        result=character.set_sequence(view,scene,cid,entries,postcondition=guard.verify,
+        impact={}
+        def verify_with_impact(after,poses):
+            guard.verify(after,poses)
+            impact['report']=build_edit_impact(rig,baselines,entries,poses,
+                                             selected_roles=params['offsets'])
+        result=character.set_sequence(view,scene,cid,entries,postcondition=verify_with_impact,
                                      write_control_ids=edited_ids,preserve_existing_keys=True,
                                      recovery_postcondition=guard.verify_recovery)
         result['curve_preservation']=guard.report()
+        result['edit_impact']={**impact['report'],'protection':result['curve_preservation']}
     else:
         result=character.set_sequence(view,scene,cid,entries)
     result.pop('native_poses')

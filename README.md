@@ -1,5 +1,10 @@
 # Cascadeur MCP
 
+The local `0.5.0a7` candidate adds a semantic `edit_impact` report to
+curve-preserving offsets: direct edits and solver-coupled Points are grouped by
+body role and slot, using actual verified native targets. See
+[edit-impact reports](docs/EDIT_IMPACT.md). This candidate is not yet published.
+
 Version `0.5.0a6` adds
 `offset_semantic_pose_sequence_preserving_curves`: a separate existing-key edit
 that keeps track/key/interpolation/easing metadata and protects unedited baked
@@ -48,7 +53,7 @@ MCP client → official MCP Python SDK (stdio)
 
 **Alpha research prototype, not a general production animation SDK.** Local
 development validation used Windows, Cascadeur 2026.2.2 and Python 3.12.
-Current source version: `0.5.0a6` (Alpha).
+Current source candidate: `0.5.0a7` (Alpha); published baseline: `0.5.0a6`.
 **Validation has only been performed on the developer's local machine.
 Cascadeur host connection on other machines has NOT been verified.** A clean
 virtual-environment installation test on that same machine does not establish
