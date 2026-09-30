@@ -1,6 +1,7 @@
 """Phase 2 validation/regression tests. Fakes here are not host acceptance."""
 import asyncio
 import sys
+from pathlib import Path
 from types import SimpleNamespace as NS
 
 import pytest
@@ -102,7 +103,8 @@ def test_readback_quaternion_sign_and_mismatch():
 def test_phase2_real_stdio_metadata_and_invalid_write(tmp_path):
     async def run():
         params = StdioServerParameters(command=sys.executable, args=['-m', 'cascadeur_mcp.server'],
-                                       env={'LOCALAPPDATA': str(tmp_path)})
+                                       env={'LOCALAPPDATA': str(tmp_path),
+                                            'PYTHONPATH': str(Path(__file__).resolve().parents[1] / 'src')})
         async with stdio_client(params) as (r, w):
             async with ClientSession(r, w) as session:
                 await session.initialize()

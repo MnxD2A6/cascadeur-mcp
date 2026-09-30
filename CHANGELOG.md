@@ -1,5 +1,87 @@
 # Changelog
 
+## 0.5.0a6 — 2026-10-01 (Alpha)
+
+- Add `offset_semantic_pose_sequence_preserving_curves`, a separate existing-key
+  operation. It writes selected Point channels without creating keys or changing
+  interpolation; ordinary writers retain their earlier behavior.
+- Verify complete track/key/easing/tangent metadata after native commit, protect
+  unedited FIXED/baked tracks, external animated data, settings and Point keys
+  outside the requested frames, and check the complete stored clip's geometry.
+- Refuse additive stacks, cycles, custom spatial tangents and unavailable state.
+  Extra metadata participates in failed-transaction recovery evidence.
+- Treat local transforms, caches and rig-coupled Points at edited frames as
+  solver state; report actual adjustments without weakening existing tolerances.
+- New schema changes the bilateral write fingerprint; restart matching processes.
+
+Actual local Polished-Cascy A/B (23 frames, three edited keys) retained all 13
+tracks' metadata; ordinary writing changed two baked-foot tracks. Maximum foot
+deviation from the source clip was 0.271669 versus 0.000643 scene units. Direct
+Point writes were 129 versus 9, with one MCP transaction in either case.
+These figures establish preservation, not better animation direction or Token
+savings. Additional complete-clip checks add execution cost.
+
+## 0.5.0a5 — local native-verified changes, included in 0.5.0a6
+
+- Add `get_semantic_pose_sequence`: 1–8 unique existing frames in one request,
+  preserving requested frame order and actual values. Full rig mapping is
+  validated once per synchronous request; no persistent identity cache.
+- Add `offset_semantic_pose_sequence`: translate every Point slot of named
+  roles from each frame's own current targets in one checked transaction.
+  Preflight all frames and computed absolute targets, including untouched Points.
+  Keep full capture, post-commit verification, native rollback and snapshot bounds.
+- Return actual solved edited roles after full verification. Relative edits are
+  not idempotent and must never automatically retry. The existing write engine
+  adds complete character keys and LINEAR intervals; authored easing is not preserved.
+- Add the write to bilateral compatibility checks; its schema changes the write
+  hash. Restart matching host and external server together.
+- Reject huge integer targets as `INVALID_PARAMS` before float conversion.
+- Fix the stdio regression test to launch the checkout under test rather than
+  accidentally reading an installed older server.
+
+Final local real-Cascy acceptance measured eight-frame reads at median 1.486 s
+(eight calls) versus 0.214 s (one call), 6.94 times faster. The same eight-frame
+right-hand translation took 4.516 s (eight reads plus one absolute write) versus
+3.156 s (one relative write), 30.12% less SDK call time. Read modes ran 20 times
+each; write modes ran three times each, alternating. Timings sum actual SDK call
+elapsed and exclude evidence persistence, arithmetic, diagnostics and Undo.
+Input method/params bytes decreased from 3,358 to 225; these are not Token counts.
+
+Batch reads were exactly equal; three old/new edit comparisons were equivalent
+under unchanged native tolerances (maximum raw difference 0.0000610352).
+Six writes restored all 23 frames; a real unachievable edit verified rollback.
+Preflight failures for a missing frame and computed target overflow did not start
+the transaction. All 447 final calls kept the user's foreground unchanged on an
+isolated desktop; normal exit restored original hook and scene hashes. This is
+not a headless product capability. Regression: 411 passed, one Windows symlink
+permission skip; no LLM Token, visual-quality or second-machine certification.
+
+## 0.5.0a4 — local native-verified changes, included in 0.5.0a6
+
+- Extend `get_semantic_pose` with bounded, unique `roles` and a strict
+  `include_joint_state` boolean. Omitted options retain the full 11-role response.
+- Read only selected Point and Joint Transform values after validating the
+  complete semantic rig. The default semantic read no longer reads 55 Joint
+  states that were previously discarded from its result.
+- Declare optional read support in the actual loaded host's `read_features`.
+  Older-host support cannot be inferred from the external MCP schema or the
+  unchanged write contract.
+- Keep full character capture, transaction verification, recovery, write schemas
+  and snapshot limits unchanged. No new animation, write tool or arbitrary
+  execution interface is added.
+
+Offline regression and real native acceptance are recorded separately; response
+size and read counts are not a claim of Token savings or improved motion quality.
+Local native checks verified exact default/selected values across 23 frames and
+a real write/Undo recovery. Twenty alternating reads per mode measured median
+structured JSON sizes of 7,821 bytes (full) and 578 bytes (right-hand Points);
+MCP call latency remained approximately 115 ms in the foreground trial and
+214 ms on an isolated Windows desktop; neither mode showed a material selective
+read speedup. The initial Hidden request did not prevent foreground activation;
+the isolated-desktop retry kept the user's foreground unchanged. This private
+test arrangement is not a headless feature of the product. Regression: 326 passed,
+1 skipped for Windows symlink permissions.
+
 ## 0.5.0a3 — 2026-09-30 (Alpha)
 
 - Require matching write contracts in both the client and host before dispatch.

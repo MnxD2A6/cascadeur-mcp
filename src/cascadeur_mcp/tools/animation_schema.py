@@ -79,7 +79,8 @@ DESCRIPTIONS['restore_pose_snapshot'] += ' Durable variant: scene_id, character_
 from . import semantic_schema
 SCHEMAS.update(semantic_schema.SCHEMAS)
 DESCRIPTIONS.update(semantic_schema.DESCRIPTIONS)
-WRITE_METHODS.update({'set_semantic_pose','set_pose_sequence','save_pose_snapshot'})
+WRITE_METHODS.update({'set_semantic_pose','set_pose_sequence','offset_semantic_pose_sequence','save_pose_snapshot'})
+WRITE_METHODS.add('offset_semantic_pose_sequence_preserving_curves')
 
 
 from . import polish_schema

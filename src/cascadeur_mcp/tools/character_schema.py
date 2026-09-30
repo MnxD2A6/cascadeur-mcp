@@ -45,5 +45,5 @@ def validate(params):
             if type(oid) is not str or not re.fullmatch(UUID['pattern'],oid): raise ValueError('invalid Point UUID')
             if type(patch) is not dict or set(patch)!={'position'}: raise ValueError('Point requires exactly position')
             v=patch['position']
-            if type(v) is not list or len(v)!=3 or any(type(n) not in (int,float) or not math.isfinite(n) or abs(n)>10000 for n in v):
+            if type(v) is not list or len(v)!=3 or any(type(n) not in (int,float) or abs(n)>10000 or not math.isfinite(n) for n in v):
                 raise ValueError('position requires three finite numbers in [-10000,10000]')

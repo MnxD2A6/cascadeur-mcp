@@ -1,7 +1,8 @@
 # Capabilities and structured errors
 
-Structured errors were added in `0.5.0a2`; the current Alpha source release
-`0.5.0a3` additionally enforces write compatibility on both sides.
+Structured errors were added in `0.5.0a2`; `0.5.0a3` additionally introduced
+write compatibility on both sides. Both remain in the current Alpha source
+release, `0.5.0a6`.
 Development validation is limited to the developer's local
 Windows machine; no connection on another machine is certified.
 
@@ -34,6 +35,20 @@ remaining session capacity or permission to write. A known tool, a writable
 channel type or an export entitlement does not prove a successful native
 operation. Use the existing scene, character, rig and export-status tools as
 appropriate, and read back changes before accepting them.
+
+The `0.5.0a4` changes included in `0.5.0a6` add `read_features.get_semantic_pose` to declare
+the loaded host's role-selection vocabulary, bound and joint-state option.
+This still does not evaluate the current rig or certify a native read. Older
+hosts may omit `read_features` and reject the new optional parameters; matching
+write contracts do not establish read-feature compatibility. See
+[selective reads](SELECTIVE_READS.md).
+
+The `0.5.0a5` changes included in `0.5.0a6` add a bounded semantic batch read and a relative
+Point sequence write. The loaded manifest advertises their operation classes
+and frame limits. The new write schema changes the bilateral write-contract
+hash, so both processes need matching code. Relative edits accumulate if
+repeated, use full-character keys and LINEAR intervals, and cannot silently
+retry. See [batch editing](BATCH_SEMANTIC_EDITING.md).
 
 MCP `tools/list` still supplies signatures from the external server process.
 After replacing source or changing the host installation, restart the host and

@@ -168,14 +168,29 @@ def skeleton(view,scene,cid):
             'identity_scope':'RigInfo owner/ObjectId UUIDs within this saved scene; import/regeneration may change IDs'}
 
 
-def get_pose(view,scene,cid,frame):
+def get_pose(view,scene,cid,frame,*,joint_ids=None,control_ids=None):
+    """Default full character read; internal selectors never change write checks.
+
+    Counts describe the complete identified character, not the selected values.
+    None reads everything; an empty set deliberately reads no such values.
+    """
     from .animation import check_frame
     check_frame(scene,frame)
     rig,joints,owned,controls=identify(scene,cid)
+    selected_joints=joints
+    selected_controls=controls
+    if joint_ids is not None:
+        if not set(joint_ids)<={o.to_string() for o in joints}:
+            raise BridgeError('CHARACTER_READ_SELECTION_MISMATCH: joint outside identified character')
+        selected_joints={o for o in joints if o.to_string() in joint_ids}
+    if control_ids is not None:
+        if not set(control_ids)<=controls.keys():
+            raise BridgeError('CHARACTER_READ_SELECTION_MISMATCH: Point outside identified character')
+        selected_controls={oid:o for oid,o in controls.items() if oid in control_ids}
     mv=scene.model_viewer()
     return {'scene_id':scene_id(view),'scene_name':view.name(),'character_id':cid,'frame':frame,
-        'joints':{o.to_string():{'name':mv.get_object_name(o),**transform(scene,o,frame)} for o in sorted(joints,key=lambda o:o.to_string())},
-        'pose':{oid:{'position':transform(scene,o,frame)['global']['position']} for oid,o in sorted(controls.items())},
+        'joints':{o.to_string():{'name':mv.get_object_name(o),**transform(scene,o,frame)} for o in sorted(selected_joints,key=lambda o:o.to_string())},
+        'pose':{oid:{'position':transform(scene,o,frame)['global']['position']} for oid,o in sorted(selected_controls.items())},
         'joint_count':len(joints),'point_control_count':len(controls),'pose_space':'global native Point targets'}
 
 
@@ -309,13 +324,16 @@ def _verify_committed(scene,snapshot,verify,callback_state):
         raise
 
 
-def _transaction_failure(scene,before,transaction_journal,exc,snapshot_id,code):
+def _transaction_failure(scene,before,transaction_journal,exc,snapshot_id,code,recovery_postcondition=None):
     """Attach state evidence only after capture succeeds and equality is checked."""
     restored=False
     recovery_error=None
     try:
         restored=equivalent(capture(scene),before)
+        if restored and recovery_postcondition is not None:
+            recovery_postcondition()
     except Exception as recovery_exc:
+        restored=False
         recovery_error=type(recovery_exc).__name__
     if not restored:
         transaction_journal['locked']=True
@@ -333,7 +351,8 @@ def set_pose(view,scene,cid,frame,pose):
     return {**native,**result,'mcp_calls_for_pose_write':1}
 
 
-def set_sequence(view,scene,cid,entries,postcondition=None,configure_tracks=None,after_interpolation=None):
+def set_sequence(view,scene,cid,entries,postcondition=None,configure_tracks=None,after_interpolation=None,
+                 *,write_control_ids=None,preserve_existing_keys=False,recovery_postcondition=None):
     """One native transaction, including every frame and postcondition.
 
     The callbacks are internal callables, never accepted from MCP or deserialized.
@@ -350,6 +369,11 @@ def set_sequence(view,scene,cid,entries,postcondition=None,configure_tracks=None
         if not 0<=entry['frame']<min(scene.data_viewer().get_animation_size(),121):
             raise BridgeError('FRAME_OUT_OF_RANGE: character writes require an existing stored frame (max 120)')
     bv,dv,lv=scene.behaviour_viewer(),scene.data_viewer(),scene.layers_viewer()
+    write_ids=set(controls) if write_control_ids is None else set(write_control_ids)
+    if not write_ids or write_ids-set(controls):
+        raise BridgeError('INVALID_CONTROL_SELECTION: require a nonempty native Point subset',execution_state='not_started')
+    if preserve_existing_keys and configure_tracks is not None:
+        raise BridgeError('INVALID_EDIT_POLICY: preserving edits cannot configure tracks',execution_state='not_started')
     layers={lid:layer for lid,layer in lv.layers_map().items() if set(layer.obj_ids)&owned}
     if any(layer.is_locked or set(layer.obj_ids)-owned for layer in layers.values()):
         raise BridgeError('UNSAFE_TRACK: locked or shared with another character')
@@ -363,7 +387,7 @@ def set_sequence(view,scene,cid,entries,postcondition=None,configure_tracks=None
     if len(j['entries'])>=8: raise BridgeError('TRANSACTION_LIMIT: restore a snapshot or save/restart after 8 outstanding character transactions')
     snapshot=save_snapshot(view,scene,cid)
     before=_snapshots[snapshot['snapshot_id']]['state']
-    fields={oid:bv.get_behaviour_data(bv.get_behaviour_by_name(obj,'Transform'),'global_position') for oid,obj in controls.items()}
+    fields={oid:bv.get_behaviour_data(bv.get_behaviour_by_name(controls[oid],'Transform'),'global_position') for oid in write_ids}
     mutation={'callback_error':None,'writes':0,'stage':'keys'}
     def verify():
         poses=[get_pose(view,scene,cid,e['frame']) for e in entries]
@@ -394,6 +418,8 @@ def set_sequence(view,scene,cid,entries,postcondition=None,configure_tracks=None
             if configure_tracks is not None:
                 configure_tracks(le,layers)
             for lid,layer in layers.items():
+                if preserve_existing_keys:
+                    continue
                 for entry in entries:
                     le.set_fixed_interpolation_or_key_if_need(lid,entry['frame'],True)
                 # A one-frame sample has terminal STEP. New intervals use ordinary
@@ -405,7 +431,7 @@ def set_sequence(view,scene,cid,entries,postcondition=None,configure_tracks=None
             for entry in entries:
                 frame,pose=entry['frame'],entry['pose']
                 mutation['stage']='point writes frame '+str(frame)
-                for oid in sorted(controls):
+                for oid in sorted(write_ids):
                     _write_point(editor,fields[oid],frame,pose[oid]['position'])
                     mutation['writes']+=1
                 mutation['stage']='rig update frame '+str(frame)
@@ -432,14 +458,14 @@ def set_sequence(view,scene,cid,entries,postcondition=None,configure_tracks=None
             scene,_snapshots[snapshot['snapshot_id']],verify,mutation['verified'][3])
         j['entries'].append({'id':uuid.uuid4().hex,'before':before,'after':after_state})
         return {'scene_id':scene_id(view),'character_id':cid,'native_poses':poses,
-            'snapshot_id':snapshot['snapshot_id'],'joints_read':len(joints),'controls_written':len(controls)*len(entries),
+            'snapshot_id':snapshot['snapshot_id'],'joints_read':len(joints),'controls_written':len(write_ids)*len(entries),
             'frames_written':[e['frame'] for e in entries],
             'mcp_calls_for_sequence_write':1,'transaction_count':1,'rig_metrics':metrics,
             'solver_adjustments':{k:v for k,v in adjustments.items() if v>0.03},
             'max_target_adjustment':worst,
             'host_elapsed_ms':(time.perf_counter()-started)*1000}
     except Exception as exc:
-        raise _transaction_failure(scene,before,j,exc,snapshot['snapshot_id'],'CHARACTER_POSE_FAILED') from exc
+        raise _transaction_failure(scene,before,j,exc,snapshot['snapshot_id'],'CHARACTER_POSE_FAILED',recovery_postcondition) from exc
 
 
 def restore(view,scene,sid):

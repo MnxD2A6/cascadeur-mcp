@@ -51,6 +51,97 @@ commit before recording history. Durable restore no longer resets all intervals
 to Linear. Real restoration returned all 23 tested frames and tracks to their
 recorded state; no tolerance or external-edit guard was relaxed.
 
+## Selective semantic reads (local verification, 2026-09-30)
+
+`get_semantic_pose` role selection reuses the verified RigInfo profile,
+Transform behavior-data lookup and data-viewer reads above; no new vendor API
+is assumed. The complete hierarchy, bindings and 43 Point controls remain
+validated before selected Transform values are read. `character.get_pose`
+defaults to full character reads for transaction and recovery callers.
+
+Real official-SDK calls against Cascadeur 2026.2.2 checked all 23 stored frames:
+default semantic values exactly matched the previous full-character projection,
+and right-hand-only values exactly matched the corresponding full result.
+A private delegating observer counted 11 Joint plus 43 Point Transform reads
+for a full semantic request, and zero Joint plus three Point reads for
+right-hand-only requests without joint state. One actual sequence write and
+native Undo restored all 23 frames, with unchanged skeleton, tracks and
+constraints. Original native scene files and the original startup hook were
+restored/checked by SHA-256; no Computer Use was used.
+
+These are local API and data-consistency checks. Reduced response bytes are
+not measured Token savings or improved animation quality, and the observed MCP
+latency did not materially change. The private native observer, scenes and logs
+are not included in the source release.
+
+## Batch semantic workflows (local verification, 2026-09-30)
+
+The new batch read and relative edit introduce no new Cascadeur API assumptions.
+They compose the same verified model/data-viewer frame reads, RigInfo profile,
+Point global targets and checked `Scene.modify_update` sequence adapter above.
+Mapping is reused only within a synchronous main-thread request. External
+offsets and every computed absolute target are checked before native mutation.
+
+Final real official-SDK acceptance on the local 23-frame Cascy scene established
+exact batch/single read equality and three old/new edit comparisons under the
+unchanged `character.equivalent` tolerance. Maximum observed raw edit/restore
+difference was 0.0000610352; Undo is not claimed bit-exact. Six successful writes
+restored all stored frames, tracks, topology and static constraints; an actual
+unachievable target produced verified native rollback. Missing-frame and
+computed-overflow preflight cases were independently checked across all frames.
+All 447 final calls kept the user's foreground unchanged; original hook and
+scene hashes were restored/checked after normal exit. No Computer Use was used.
+
+Relative editing inherits complete character keys and LINEAR intervals from
+the existing sequence engine, so it does not preserve authored easing curves.
+Native solving can adjust targets. Smaller edited-role responses are projected
+after full native verification, not substituted for it. Measured SDK workflow
+time and bytes do not establish Token savings or better-looking animation.
+Raw scenes, logs and the delegating observer remain private, excluded resources.
+
+## Existing-key curve preservation (local verification, 2026-10-01)
+
+The separate curve-preserving offset composes the previously verified Point
+write/rig-update/transaction/interpolator APIs. It does not call a curve-authoring
+API or create keys. The following additional reads have explicit installed sources:
+
+| Read | Cascadeur 2026.2.2 installed declaration | Evidence |
+|---|---|---|
+| `csc.additive_layers.get_manager(scene).get_stacked_layers_count()` | `resources/scripts/stubs/csc/additive_layers.pyi`, Manager and get_manager | Actual tested scene reported zero; any stack is rejected, not serialized |
+| `csc.layers.CyclesViewer(layer).any_cycles_exist_in_frames(0, count-1)` | `resources/scripts/stubs/csc/layers/__init__.pyi`, CyclesViewer | Actual complete-clip checks found no cycles; cycle writing is unsupported |
+| interval interpolation/common/AI description, key label/common/tangent mode/weights | `resources/scripts/stubs/csc/layers/layer.pyi`, Interval, Key, Tangents | Actual full track metadata was identical before and after commit |
+
+[Official Easing](https://cascadeur.com/help/category/317) separates temporal
+spacing from path shape and includes Linear interpolation. Changing interpolation
+to LINEAR does not itself prove all easing weights were cleared. The new operation
+keeps those weights and the interpolation type exactly.
+[Trajectory Tangents](https://cascadeur.com/help/category/287) has specific rig
+and interpolation limits; no complete spatial tangent-vector recovery interface
+was established. UserDefined tangents are therefore rejected throughout the scene.
+[Additive Layers](https://cascadeur.com/help/category/318) are distinct from
+animation tracks; this bridge does not claim its old capture stores their stack.
+
+Local real official-MCP-SDK validation used an independent copy of the accepted
+Polished Cascy clip with 23 stored frames and 13 tracks, including two FIXED baked
+foot tracks. The same three-key hand correction changed two tracks with the
+ordinary tool and zero with the preserving tool. Native write counts were 129
+versus nine; maximum foot deviation from the source was 0.271669 versus 0.000643
+scene units. Key/non-key and FIXED-track rejections were checked against actual
+scene data. An unreachable native target produced verified full-state rollback.
+Continuous native playback and native save were checked separately from tests.
+The saved copy was opened in a fresh Cascadeur session: all 23 actual poses and
+the complete skeleton/track metadata were equivalent, with another successful
+native continuous playback. Original scene and hook hashes were unchanged after
+normal closure. Validation used a non-active Windows desktop without Computer Use.
+
+Actual solver coupling moved a forearm AdditionalPoint at an edited frame; its
+Transform global_position shares the native ConnectionPointTwoBody target data
+ID. This is why the tool protects authored Point keys outside requested frames
+and allows checked solver adjustments inside them. No numeric tolerance was widened.
+Local transforms, hidden velocity caches and driven Joint data are not falsely
+classified as immutable authored input. Raw scenes, snapshots, local paths and
+observer code remain excluded private validation resources.
+
 ## Third-party code and attribution
 
 The separate `ThatGuyTHD/animation-mcp` repository was reviewed locally for

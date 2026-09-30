@@ -1,5 +1,11 @@
 # Cascadeur MCP
 
+Version `0.5.0a6` adds
+`offset_semantic_pose_sequence_preserving_curves`: a separate existing-key edit
+that keeps track/key/interpolation/easing metadata and protects unedited baked
+tracks. See [curve-preserving editing](docs/CURVE_PRESERVING_EDITING.md) for its
+strict supported scope. Existing writing tools keep their previous behavior.
+
 An experimental Python bridge that lets MCP clients inspect and edit animation
 inside a running Cascadeur instance, without Computer Use.
 
@@ -21,6 +27,15 @@ MCP client → official MCP Python SDK (stdio)
 - Character skeleton inspection and a validated Cascy semantic rig profile.
 - Named pelvis, chest, head, hand, elbow, foot and knee controls. Rig Point
   targets are writable; driven Joint transforms remain read-only in this profile.
+- Optional role selection and joint-state omission in `get_semantic_pose` reduce
+  unnecessary Transform reads and response data while retaining full rig validation.
+- `get_semantic_pose_sequence`: read up to eight existing frames once, with the
+  same optional selection and actual native values.
+- `offset_semantic_pose_sequence`: translate whole named Point groups across
+  up to eight frames once, from each frame's real current targets. Full capture,
+  checked commit and rollback remain; this key-authoring operation uses LINEAR
+  intervals and does not preserve authored easing. See
+  [batch workflow and limits](docs/BATCH_SEMANTIC_EDITING.md).
 - `set_pose_sequence`: up to eight existing frames in one checked transaction,
   with guarded rollback attempts and explicit recovery-required errors.
 - Session snapshots and a durable, single-pose JSON snapshot format.
@@ -33,7 +48,7 @@ MCP client → official MCP Python SDK (stdio)
 
 **Alpha research prototype, not a general production animation SDK.** Local
 development validation used Windows, Cascadeur 2026.2.2 and Python 3.12.
-Current source release: `0.5.0a3` (Alpha).
+Current source version: `0.5.0a6` (Alpha).
 **Validation has only been performed on the developer's local machine.
 Cascadeur host connection on other machines has NOT been verified.** A clean
 virtual-environment installation test on that same machine does not establish
@@ -147,6 +162,13 @@ Finger input uses local unit quaternions `[w,x,y,z]` and named finger segments,
 not those world-position targets. Read [hand controls](docs/HAND_CONTROLS.md)
 before editing. There is no universal `fist` preset or automatic motion generator.
 For connection failures, use [troubleshooting](docs/TROUBLESHOOTING.md).
+
+For focused inspection, `get_semantic_pose` accepts `roles`, such as
+`["right_hand"]`, and `include_joint_state: false`. Omitted options keep the full
+11-role result and read-only joint states. Discover support in the responding
+host's `read_features`; update and restart both processes before using these
+options. A matching write contract does not establish read-option support on an
+older host. See [selective reads](docs/SELECTIVE_READS.md) for examples and limits.
 
 ## Safety and limitations
 

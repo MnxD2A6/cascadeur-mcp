@@ -91,9 +91,20 @@ def build_map(skeleton):
 def mapping(view,scene,cid):
     return build_map(character.skeleton(view,scene,cid))
 
-def encode_pose(mapping, native):
+def encode_pose(mapping, native, roles=None):
     return {role:{slot:native[c['control_id']]['position'] for slot,c in group['controls'].items()}
-            for role,group in mapping['roles'].items()}
+            for role,group in mapping['roles'].items() if roles is None or role in roles}
+
+def select_pose(result,roles=None,include_joint_state=True):
+    """Select response fields without rounding values or changing rig identity."""
+    selected={**result,'pose':{role:pose for role,pose in result['pose'].items()
+                             if roles is None or role in roles}}
+    if include_joint_state:
+        selected['joint_state']={role:state for role,state in result['joint_state'].items()
+                                 if roles is None or role in roles}
+    else:
+        selected.pop('joint_state',None)
+    return selected
 
 def expand(mapping, native, patch):
     result={oid:{'position':list(item['position'])} for oid,item in native.items()}
@@ -102,21 +113,89 @@ def expand(mapping, native, patch):
             result[mapping['roles'][role]['controls'][slot]['control_id']]={'position':list(value)}
     return result
 
-def get_pose(view,scene,cid,frame,rig=None):
+def get_pose(view,scene,cid,frame,rig=None,roles=None,include_joint_state=True):
     rig=rig or mapping(view,scene,cid)
-    native=character.get_pose(view,scene,cid,frame)
-    return {'scene_id':native['scene_id'],'character_id':cid,'frame':frame,
+    selected_roles=[role for role in rig['roles'] if roles is None or role in roles]
+    control_ids={c['control_id'] for role in selected_roles
+                 for c in rig['roles'][role]['controls'].values()}
+    joint_ids=({rig['roles'][role]['joint_state']['joint_id'] for role in selected_roles}
+               if include_joint_state else set())
+    native=character.get_pose(view,scene,cid,frame,joint_ids=joint_ids,control_ids=control_ids)
+    result={'scene_id':native['scene_id'],'character_id':cid,'frame':frame,
             'profile':rig['profile'],'fingerprint':rig['fingerprint'],
-            'pose':encode_pose(rig,native['pose']),
-            'joint_state':{role:native['joints'][group['joint_state']['joint_id']] for role,group in rig['roles'].items()},
+            'pose':encode_pose(rig,native['pose'],selected_roles),
+            'joint_state':{role:native['joints'][rig['roles'][role]['joint_state']['joint_id']]
+                           for role in selected_roles if include_joint_state},
             'joint_state_writable':False}
+    return select_pose(result,roles,include_joint_state)
+
+def _check_frames(scene,frames):
+    from .animation import check_frame
+    for frame in frames: check_frame(scene,frame)
+
+
+def offset_sequence(view,scene,params,*,preserve_curves=False):
+    """Preflight all targets, then enter the existing checked transaction once."""
+    from ..tools.character_schema import validate as validate_native_targets
+    cid=params['character_id']
+    try:
+        if params['scene_id']!=character.scene_id(view):
+            raise BridgeError('SCENE_MISMATCH: wrong saved scene identity')
+        rig=mapping(view,scene,cid)
+        _check_frames(scene,params['frames'])
+        guard=None
+        if preserve_curves:
+            from . import curve_edit
+            edited_ids={c['control_id'] for role in params['offsets']
+                        for c in rig['roles'][role]['controls'].values()}
+            guard=curve_edit.preflight(scene,cid,params['frames'],edited_ids)
+        entries=[]
+        for frame in params['frames']:
+            old=character.get_pose(view,scene,cid,frame,joint_ids=set())['pose']
+            patch={role:{slot:[old[c['control_id']]['position'][i]+delta[i] for i in range(3)]
+                         for slot,c in rig['roles'][role]['controls'].items()}
+                   for role,delta in params['offsets'].items()}
+            pose=expand(rig,old,patch)
+            # Recheck every final absolute target, including untouched Points.
+            # Input offsets being bounded does not imply the sums are bounded.
+            validate_native_targets({'pose':pose})
+            entries.append({'frame':frame,'pose':pose})
+    except Exception as exc:
+        message=str(exc) if isinstance(exc,BridgeError) else 'PREFLIGHT_FAILED: '+str(exc)
+        raise BridgeError(message,execution_state='not_started') from exc
+    # No catch around the transaction: preserve verified rollback/recovery errors.
+    if preserve_curves:
+        result=character.set_sequence(view,scene,cid,entries,postcondition=guard.verify,
+                                     write_control_ids=edited_ids,preserve_existing_keys=True,
+                                     recovery_postcondition=guard.verify_recovery)
+        result['curve_preservation']=guard.report()
+    else:
+        result=character.set_sequence(view,scene,cid,entries)
+    result.pop('native_poses')
+    return {**result,'profile':rig['profile'],'fingerprint':rig['fingerprint'],
+            'offsets':{role:list(delta) for role,delta in params['offsets'].items()},
+            'coordinate_space':rig['coordinate_space'],
+            'poses':[get_pose(view,scene,cid,e['frame'],rig,roles=params['offsets'],
+                              include_joint_state=False) for e in entries]}
+
 
 def dispatch(view,scene,method,params):
+    if method=='offset_semantic_pose_sequence_preserving_curves':
+        return offset_sequence(view,scene,params,preserve_curves=True)
+    if method=='offset_semantic_pose_sequence': return offset_sequence(view,scene,params)
     if 'scene_id' in params and params['scene_id']!=character.scene_id(view):
         raise BridgeError('SCENE_MISMATCH: wrong saved scene identity')
     cid=params['character_id'];rig=mapping(view,scene,cid)
     if method=='get_rig_semantics': return rig
-    if method=='get_semantic_pose': return get_pose(view,scene,cid,params['frame'],rig)
+    if method=='get_semantic_pose':
+        return get_pose(view,scene,cid,params['frame'],rig,roles=params.get('roles'),
+                        include_joint_state=params.get('include_joint_state',True))
+    if method=='get_semantic_pose_sequence':
+        _check_frames(scene,params['frames'])
+        return {key:rig[key] for key in ('scene_id','character_id','profile','fingerprint')} | {
+            'poses':[get_pose(view,scene,cid,frame,rig,roles=params.get('roles'),
+                              include_joint_state=params.get('include_joint_state',True))
+                     for frame in params['frames']]}
     entries=params['poses'] if method=='set_pose_sequence' else [{'frame':params['frame'],'pose':params['pose']}]
     native=[]
     for entry in entries:

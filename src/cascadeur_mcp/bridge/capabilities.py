@@ -40,12 +40,40 @@ def describe():
             }
             for method in sorted(METHODS)
         },
+        'read_features': {
+            'get_semantic_pose': {
+                'roles': list(SCHEMAS['get_semantic_pose']['properties']['roles']['items']['enum']),
+                'roles_max': SCHEMAS['get_semantic_pose']['properties']['roles']['maxItems'],
+                'include_joint_state': True,
+                'default': 'all roles with read-only joint states',
+                'rig_validation': 'complete profile, including unselected roles',
+            },
+            'get_semantic_pose_sequence': {
+                'frames_max': SCHEMAS['get_semantic_pose_sequence']['properties']['frames']['maxItems'],
+                'frame_order': 'request order; unique existing frames only',
+                'selection': 'same roles and include_joint_state as get_semantic_pose',
+                'rig_validation': 'complete profile once per synchronous request; no cross-request cache',
+            },
+        },
         'runtime_checks': {
             'scene': 'NOT_EVALUATED',
             'rig_compatibility': 'NOT_EVALUATED',
             'track_write_safety': 'NOT_EVALUATED',
             'export_entitlement': 'NOT_EVALUATED',
             'native_operation_success': 'NOT_EVALUATED',
+        },
+        'write_features': {
+            'offset_semantic_pose_sequence_preserving_curves': {
+                'frames_max': 8,
+                'keys': 'existing keys on edited tracks; no added keys',
+                'channels': 'selected native Point global positions only',
+                'preserves': 'track/key metadata, interpolation, easing weights, supported tangent mode',
+                'protects': 'unedited FIXED/baked tracks, external data, settings, Point keys outside requested frames',
+                'solver_coupling': 'other rig Points can follow at edited frames; inspect actual adjustments',
+                'rejects': 'editing FIXED tracks, custom tangents, additive stacks, cycles, unavailable state',
+                'trajectory_shape': 'edited trajectories may change',
+                'runtime_preconditions': 'NOT_EVALUATED',
+            },
         },
         'limits': {
             # protocol.py, client.py and host.py transport guards.
@@ -59,6 +87,9 @@ def describe():
             'object_page_size_max': 200,
             'legacy_object_frame_index_max': SCHEMAS['set_current_frame']['properties']['frame']['maximum'],
             'pose_sequence_frames_max': SCHEMAS['set_pose_sequence']['properties']['poses']['maxItems'],
+            'semantic_read_sequence_frames_max': SCHEMAS['get_semantic_pose_sequence']['properties']['frames']['maxItems'],
+            'semantic_offset_sequence_frames_max': SCHEMAS['offset_semantic_pose_sequence']['properties']['frames']['maxItems'],
+            'curve_preserving_sequence_frames_max': SCHEMAS['offset_semantic_pose_sequence_preserving_curves']['properties']['frames']['maxItems'],
             'hand_sequence_frames_max': SCHEMAS['set_hand_pose_sequence']['properties']['poses']['maxItems'],
             'retime_keys_min': SCHEMAS['retime_character_motion']['properties']['keys']['minItems'],
             'retime_keys_max': SCHEMAS['retime_character_motion']['properties']['keys']['maxItems'],
@@ -83,6 +114,7 @@ def describe():
             'frames': 'Frames must already exist. Sequence writes do not extend the timeline. Input frame-index bounds do not prove that a scene contains those frames.',
             'joint_writes': 'Named-object writes require unique names and isolated unlocked tracks. set_transform requires an existing key. Joint subtree writes require a pure topmost Joint tree, unit scale, two endpoint keys and linear FK sections (terminal STEP allowed).',
             'character_writes': 'set_character_pose requires every native Point control; semantic patches merge into that complete target set. Point writes require exclusive unlocked IK tracks and no AI interpolation. Semantic patches use validated cascy-points-v1 topology and native Point world positions; driven body Joint states are read-only.',
+            'relative_edits': 'offset_semantic_pose_sequence translates every Point slot of each selected role in world scene units from each frame\'s current state. Final absolute targets are validated before a single checked transaction. Repeating a call accumulates the delta; no automatic retry is permitted.',
             'hand_writes': 'Finger local unit quaternions require validated Cascy names, parent chains, animated rotation data and unlocked finger-only tracks. Hand Point targets do not curl fingers.',
             'retiming': 'All character tracks must have exactly the supplied synchronized keys; endpoints stay fixed. Optional contact stabilization requires the supported stationary left-foot/right-toe profile.',
             'snapshots': 'Session snapshots expire on restart and require original scene/history guards. Durable JSON restores one pose and can recompute adjacent interpolation; it is not a whole-scene backup.',

@@ -7,6 +7,15 @@ PHASES = {'client_validation', 'client_session', 'client_publish', 'client_respo
 ID = re.compile(r'[0-9a-f]{32}\Z')
 CODE = re.compile(r'[A-Z][A-Z0-9_]{1,63}\Z')
 MESSAGES = {
+    'CURVE_KEY_REQUIRED': 'Choose frames that already have keys on the edited tracks; no keys were added.',
+    'CURVE_STATE_UNAVAILABLE': 'Required curve, additive or cycle state could not be verified; no edit started.',
+    'UNSUPPORTED_ADDITIVE_LAYERS': 'This edit cannot safely restore an additive layer stack; no edit started.',
+    'UNSUPPORTED_CUSTOM_TANGENTS': 'Custom spatial tangents cannot be fully verified; no edit started.',
+    'UNSUPPORTED_EDIT_TRACK': 'Selected tracks use unsupported or baked interpolation; no edit started.',
+    'UNSUPPORTED_CYCLES': 'Cycle state is outside the recovery snapshot; no edit started.',
+    'CURVE_METADATA_CHANGED': 'Track/key/curve metadata changed during verification; inspect rollback evidence.',
+    'PROTECTED_CURVE_DATA_CHANGED': 'Protected baked, external or settings data changed; inspect rollback evidence.',
+    'UNEDITED_KEY_CHANGED': 'An untouched authored Point key changed; inspect rollback evidence.',
     'INVALID_PARAMS': 'Arguments failed validation; correct the input.',
     'UNKNOWN_METHOD': 'This operation is not in the loaded bridge allowlist.',
     'BRIDGE_UNAVAILABLE': 'No host session is available; start the matching Cascadeur instance.',
