@@ -2,7 +2,7 @@
 
 ## Semantic edit-impact reports (local verification, 2026-10-01)
 
-The `0.5.0a7` candidate introduces no Cascadeur API. It derives Point movements
+Version `0.5.0a7` introduces no Cascadeur API. It derives Point movements
 from the pre-edit targets already read by semantic offsets and native poses
 already collected by `character.set_sequence` verification. RigInfo-validated
 role/slot mapping supplies labels; no list index or guessed relationship is used.

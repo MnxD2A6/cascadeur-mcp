@@ -1,6 +1,6 @@
 # Semantic edit-impact reports
 
-The `0.5.0a7` candidate adds `edit_impact` to successful
+Version `0.5.0a7` adds `edit_impact` to successful
 `offset_semantic_pose_sequence_preserving_curves` results. No new MCP tool or
 input option is required. Existing offset arguments and limits still apply.
 Ordinary key-authoring tools do not produce this report.

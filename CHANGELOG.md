@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.5.0a7 — local candidate, not published
+## 0.5.0a7 — 2026-10-01 (Alpha)
 
 - Add `edit_impact` to successful curve-preserving offsets. Group actual Point
   displacement and error against requested targets by semantic role/slot.
