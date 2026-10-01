@@ -64,6 +64,13 @@ Cascadeur host connection on other machines has NOT been verified.** A clean
 virtual-environment installation test on that same machine does not establish
 cross-machine host compatibility.
 
+Native shutdown stability remains under investigation. One local session
+completed edit/play/restore/save checks but exited with `0xC0000005` in
+`Qt6Core.dll` after a normal close request. Two isolated follow-up checks
+exited normally; they do not establish a fix or the native cause. Original
+source scenes remained unchanged. This alpha does not claim production-safe
+native shutdown across every workflow.
+
 The GitHub workflow in `.github/workflows/python-tests.yml` is configured to run installation,
 Python contract/stdio tests, dependency checks and wheel-import checks on Windows
 and Linux with Python 3.10 and 3.12. Hosted CI does not install Cascadeur and does

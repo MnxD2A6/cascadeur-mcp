@@ -2,6 +2,10 @@
 
 ## 0.5.0a8 — 2026-10-01 (Alpha)
 
+- Recorded one native shutdown access violation after successful local
+  edit/play/restore/save checks. Two isolated follow-up checks exited normally;
+  the cause remains unestablished and is not reported as fixed.
+
 - Native curve coverage found checked recovery failure on a CLAMPED_BEZIER
   Cascy fixture. Character Point and finger writes now reject that mode anywhere
   in the scene before snapshot/mutation; retiming no longer accepts it. This
