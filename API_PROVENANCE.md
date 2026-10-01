@@ -164,6 +164,19 @@ Local transforms, hidden velocity caches and driven Joint data are not falsely
 classified as immutable authored input. Raw scenes, snapshots, local paths and
 observer code remain excluded private validation resources.
 
+## CLAMPED_BEZIER recovery restriction (0.5.0a8)
+
+The `0.5.0a8` safety guard uses the same installed Interval interpolation read
+above. `csc.layers.InterpolationType.CLAMPED_BEZIER` is enum value 6 in
+`resources/scripts/stubs/csc/layers/layer.pyi`; no new Cascadeur call is added.
+Local real BEZIER and LOW_AMPLITUDE_BEZIER fixtures passed edit/metadata/whole-clip
+recovery checks. A CLAMPED_BEZIER fixture passed its write but failed checked
+Undo recovery and correctly locked the journal. Its independent saved failure
+copy was retained; the original scene was unchanged. The native cause is not
+yet established. The guard refuses character Point/finger writes before capture
+or mutation if any track contains that mode; it does not claim repaired Undo.
+See [curve evidence and limits](docs/CURVE_PRESERVING_EDITING.md).
+
 ## Third-party code and attribution
 
 The separate `ThatGuyTHD/animation-mcp` repository was reviewed locally for

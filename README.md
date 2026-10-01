@@ -1,5 +1,10 @@
 # Cascadeur MCP
 
+Version `0.5.0a8` adds a fail-closed safety restriction after native
+CLAMPED_BEZIER recovery failed: character Point and finger writes reject scenes
+containing that mode before editing. Retiming no longer accepts it. This does
+not repair Cascadeur Undo. Reads and the verified curve modes remain available.
+
 Version `0.5.0a7` adds a semantic `edit_impact` report to
 curve-preserving offsets: direct edits and solver-coupled Points are grouped by
 body role and slot, using actual verified native targets. See
@@ -53,11 +58,18 @@ MCP client → official MCP Python SDK (stdio)
 
 **Alpha research prototype, not a general production animation SDK.** Local
 development validation used Windows, Cascadeur 2026.2.2 and Python 3.12.
-Current source version: `0.5.0a7` (Alpha).
+Current source version: `0.5.0a8` (Alpha).
 **Validation has only been performed on the developer's local machine.
 Cascadeur host connection on other machines has NOT been verified.** A clean
 virtual-environment installation test on that same machine does not establish
 cross-machine host compatibility.
+
+The GitHub workflow in `.github/workflows/python-tests.yml` is configured to run installation,
+Python contract/stdio tests, dependency checks and wheel-import checks on Windows
+and Linux with Python 3.10 and 3.12. Hosted CI does not install Cascadeur and does
+not establish native rig editing or another machine's host connection. Native
+curve validation is documented separately in [curve-preserving editing](docs/CURVE_PRESERVING_EDITING.md).
+
 The external package requires Python 3.10+ and the official MCP Python SDK v1.
 Other operating systems, Cascadeur releases and arbitrary character rigs have
 not been validated. MCP protocol compatibility is not client acceptance testing.

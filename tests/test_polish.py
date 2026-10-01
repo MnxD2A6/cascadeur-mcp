@@ -16,6 +16,7 @@ def plan():
 
 @pytest.mark.parametrize('field,value',[
     ('source',True),('target',121),('source',-1),('interpolation','AI'),
+    ('interpolation','CLAMPED_BEZIER'),
     ('left_weight',float('nan')),('right_weight',float('inf')),('left_weight',True),
     ('right_weight',1.0),('left_weight',-.1),('interpolation','exec(script)'),
 ])

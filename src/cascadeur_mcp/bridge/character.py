@@ -361,6 +361,8 @@ def set_sequence(view,scene,cid,entries,postcondition=None,configure_tracks=None
     """
     import csc
     started=time.perf_counter()
+    from .curve_edit import require_recoverable_curves
+    require_recoverable_curves(scene)
     rig,joints,owned,controls=identify(scene,cid)
     if not 1<=len(entries)<=8 or len({e['frame'] for e in entries})!=len(entries):
         raise BridgeError('INVALID_SEQUENCE: require 1-8 distinct frames')

@@ -53,6 +53,8 @@ def read(view,scene,cid,frame,links=None):
 def write(view,scene,cid,entries):
     import csc
     from .animation import check_frame
+    from .curve_edit import require_recoverable_curves
+    require_recoverable_curves(scene)
     links=bindings(scene,cid)
     bv,lv=scene.behaviour_viewer(),scene.layers_viewer()
     finger_ids={obj for group in links.values() for obj,did in group.values()}

@@ -42,6 +42,11 @@ not a promise that the original path shape stays identical.
   share those keys. No timeline extension or automatic key creation.
 - Classic IK tracks only. STEP endpoints are retained. Editing FIXED/baked
   tracks or NONE/AI interpolation is refused.
+- Since `0.5.0a8`, CLAMPED_BEZIER anywhere in the scene is refused before
+  character Point or finger editing. A real Cascy fixture passed its offset
+  write but failed checked snapshot recovery; the bridge locked further writes.
+  This safeguard does not fix that unresolved native recovery failure. Retiming
+  also rejects CLAMPED_BEZIER input. Read-only inspection remains available.
 - Unedited FIXED tracks retain their data over the complete stored clip.
   All external animated data and all animated settings are protected. Authored
   Point targets at keys outside the requested frames are checked separately
@@ -59,9 +64,23 @@ not a promise that the original path shape stays identical.
   changes the compatibility fingerprint. No hot reload or silent fallback.
 
 `CURVE_KEY_REQUIRED`, `UNSUPPORTED_EDIT_TRACK`, `UNSUPPORTED_CUSTOM_TANGENTS`,
-`UNSUPPORTED_ADDITIVE_LAYERS`, `UNSUPPORTED_CYCLES` and
+`UNSUPPORTED_ADDITIVE_LAYERS`, `UNSUPPORTED_CYCLES`, `UNSUPPORTED_CLAMPED_RECOVERY` and
 `CURVE_STATE_UNAVAILABLE` identify preflight failures. Transaction failures
 retain explicit `execution_state`, `rollback_verified` and recovery snapshot.
+
+## Additional local curve evidence
+
+On Cascadeur 2026.2.2, real BEZIER and LOW_AMPLITUDE_BEZIER fixtures with
+two unedited FIXED foot tracks each passed a three-frame semantic offset,
+exact track/curve metadata checks, 23-frame readback and checked restoration
+of all 66 Joints and 43 Points. The tested synchronized key layout was
+`0, 6, 8, 10, 11, 13, 16, 22`. Native readback kept STEP at the adjacent
+10→11 interval and the terminal endpoint. This observation is specific to
+these fixtures, not a promise about every Cascadeur clip.
+
+CLAMPED_BEZIER was tested and failed recovery; it is not counted as supported.
+The original source animation remained unchanged and the failed test scene was
+saved independently. Numeric tolerances and recovery locks were not weakened.
 
 This remains a locally validated alpha. Other machines' Cascadeur host
 connections and arbitrary rigs are not established by these tests. Smaller data

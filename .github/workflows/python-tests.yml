@@ -1,0 +1,56 @@
+name: Python contracts and package
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: python-tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 10
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-latest, ubuntu-latest]
+        python: ['3.10', '3.12']
+    steps:
+      - name: Check out source
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
+      - name: Set up Python
+        uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
+        with:
+          python-version: ${{ matrix.python }}
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - name: Install source and tests
+        run: python -m pip install -e ".[test]"
+      - name: Verify dependencies
+        run: python -m pip check
+      - name: Run contracts, maintenance and real stdio tests
+        run: python -m pytest -q -ra
+      - name: Build wheel
+        run: python -m pip wheel --no-deps . --wheel-dir dist
+      - name: Replace editable install with wheel
+        run: |
+          python -m pip uninstall -y cascadeur-mcp
+          python -m pip install --no-deps --no-index --find-links dist cascadeur-mcp
+      - name: Verify installed wheel
+        run: |
+          python -c "from pathlib import Path; from importlib.metadata import version; import cascadeur_mcp; assert 'site-packages' in Path(cascadeur_mcp.__file__).parts; assert version('cascadeur-mcp') == cascadeur_mcp.__version__; print('Wheel import verified:', cascadeur_mcp.__version__)"
+          python -m pip check
+
+# Hosted runners do not contain Cascadeur or a licensed host. These checks
+# validate Python contracts, stdio behavior and packaging, not native rig editing
+# or a Cascadeur host connection on another machine. No scenes/assets are needed.

@@ -13,6 +13,25 @@ def _id(value):
     return character.encoded(value)
 
 
+def require_recoverable_curves(scene):
+    """Fail before capture or mutation when native recovery is unverified.
+
+    CLAMPED_BEZIER (installed enum 6) failed checked Undo on a real Cascy
+    clip. Inspect every track: whole-scene Undo can affect unedited tracks.
+    Reads and snapshot inspection remain available; this is not an Undo fix.
+    """
+    try:
+        clamped = any(int(s.interval.interpolation) == 6
+                      for layer in scene.layers_viewer().layers_map().values()
+                      for s in layer.sections.values())
+    except Exception as exc:
+        raise BridgeError('CURVE_STATE_UNAVAILABLE: recovery curve state cannot be read',
+                          execution_state='not_started') from exc
+    if clamped:
+        raise BridgeError('UNSUPPORTED_CLAMPED_RECOVERY: native CLAMPED_BEZIER recovery is unverified; no edit started',
+                          execution_state='not_started')
+
+
 def _metadata(scene):
     result={}
     for lid,layer in scene.layers_viewer().layers_map().items():
@@ -25,6 +44,7 @@ def _metadata(scene):
 
 
 def _unsupported_state(scene,count):
+    require_recoverable_curves(scene)
     import csc
     manager=csc.additive_layers.get_manager(scene)
     stack_count=manager.get_stacked_layers_count()

@@ -67,6 +67,44 @@ def test_existing_keys_and_unedited_fixed_tracks_are_accepted(native):
     native.module.preflight(native.scene, native.cid, [6,10], {'hand'})
 
 
+@pytest.mark.parametrize('mode', [0, 1, 2, 3])
+@pytest.mark.parametrize('weights', [(.01, .99), (.2, .45)])
+def test_classic_modes_retain_easing_and_step_endpoint(native, mode, weights):
+    from cascadeur_mcp.bridge import character
+    layer = native.layers['hand-track']
+    for frame, section in layer.sections.items():
+        section.interval.interpolation = 3 if frame == 22 else mode
+        section.key.left_weight_velocity, section.key.right_weight_velocity = weights
+    native.state['tracks']['hand-track']['sections'] = character.sections(layer)
+    guard = native.module.preflight(native.scene, native.cid, [6, 10], {'hand'})
+    changed = copy.deepcopy(native.state)
+    changed['values']['d:hand-data'][6][0] += .05
+    guard.verify(changed, [])
+    assert guard.report()['interpolation_easing_tangent_mode'] == 'exact'
+    layer.sections[6].key.right_weight_velocity += .001
+    with pytest.raises(BridgeError, match='CURVE_METADATA_CHANGED'):
+        guard.verify(changed, [])
+
+
+@pytest.mark.parametrize('field', ['left_weight_velocity', 'right_weight_velocity'])
+def test_nonfinite_native_easing_fails_closed(native, field):
+    setattr(native.layers['hand-track'].sections[6].key, field, float('nan'))
+    with pytest.raises(BridgeError, match='CURVE_STATE_UNAVAILABLE'):
+        native.module.preflight(native.scene, native.cid, [6, 10], {'hand'})
+
+
+@pytest.mark.parametrize('reader', ['get_stacked_layers_count', 'CyclesViewer'])
+def test_native_state_reader_failure_is_not_treated_as_absence(native, reader):
+    def unavailable(*args):
+        raise RuntimeError('synthetic native read failure')
+    if reader == 'get_stacked_layers_count':
+        native.manager.get_stacked_layers_count = unavailable
+    else:
+        native.csc.layers.CyclesViewer = unavailable
+    with pytest.raises(BridgeError, match='CURVE_STATE_UNAVAILABLE'):
+        native.module.preflight(native.scene, native.cid, [6, 10], {'hand'})
+
+
 @pytest.mark.parametrize('fault,code', [
     ('missing_key','CURVE_KEY_REQUIRED'), ('additive','UNSUPPORTED_ADDITIVE_LAYERS'),
     ('custom_tangent','UNSUPPORTED_CUSTOM_TANGENTS'), ('selected_fixed','UNSUPPORTED_EDIT_TRACK'),
@@ -207,6 +245,48 @@ def test_external_custom_tangent_is_rejected(native):
     native.layers['outside-track']=outside
     with pytest.raises(BridgeError,match='UNSUPPORTED_CUSTOM_TANGENTS'):
         native.module.preflight(native.scene,native.cid,[6,10],{'hand'})
+
+
+@pytest.mark.parametrize('location', ['selected', 'unedited', 'external'])
+def test_clamped_recovery_is_refused_before_snapshot(native, monkeypatch, location):
+    from cascadeur_mcp.bridge import character
+    layer = native.layers['hand-track' if location == 'selected' else 'foot-track']
+    if location == 'external':
+        layer = copy.deepcopy(layer)
+        layer.obj_ids = ['outside']
+        native.layers['outside-track'] = layer
+    layer.sections[6].interval.interpolation = 6
+    captures = []
+    def capture(scene):
+        captures.append(scene)
+        return copy.deepcopy(native.state)
+    monkeypatch.setattr(character, 'capture', capture)
+    with pytest.raises(BridgeError, match='UNSUPPORTED_CLAMPED_RECOVERY') as caught:
+        native.module.preflight(native.scene, native.cid, [6, 10], {'hand'})
+    assert caught.value.execution_state == 'not_started'
+    assert captures == []
+
+
+@pytest.mark.parametrize('writer', ['points', 'fingers'])
+def test_regular_character_writes_also_refuse_clamped_before_snapshot(native, monkeypatch, writer):
+    from cascadeur_mcp.bridge import character, hands
+    native.layers['foot-track'].sections[6].interval.interpolation = 6
+    snapshots = []
+    def snapshot(*args):
+        snapshots.append(True)
+        raise BridgeError('SNAPSHOT_STARTED: write preflight was missed')
+    monkeypatch.setattr(character, 'save_snapshot', snapshot)
+    if writer == 'points':
+        entries = [{'frame': 6, 'pose': {key: {'position': [0., 0., 0.]}
+                                        for key in ('hand', 'foot')}}]
+        call = lambda: character.set_sequence(None, native.scene, native.cid, entries)
+    else:
+        call = lambda: hands.write(None, native.scene, native.cid,
+                                   [{'frame': 6, 'hands': {'right': {'index1': [1., 0., 0., 0.]}}}])
+    with pytest.raises(BridgeError, match='UNSUPPORTED_CLAMPED_RECOVERY') as caught:
+        call()
+    assert caught.value.execution_state == 'not_started'
+    assert snapshots == []
 
 
 def test_extra_metadata_damage_cannot_report_verified_rollback(native):

@@ -3,7 +3,7 @@ import math
 from .character_schema import SCENE, UUID, FRAME, schema, validate as identity
 
 KEY = schema({'source':FRAME, 'target':FRAME,
-    'interpolation':{'type':'string','enum':['LINEAR','BEZIER','LOW_AMPLITUDE_BEZIER','CLAMPED_BEZIER']},
+    'interpolation':{'type':'string','enum':['LINEAR','BEZIER','LOW_AMPLITUDE_BEZIER']},
     'left_weight':{'type':'number','minimum':0.01,'maximum':0.99},
     'right_weight':{'type':'number','minimum':0.01,'maximum':0.99}},
     ('source','target','interpolation','left_weight','right_weight'))

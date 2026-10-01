@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.5.0a8 — 2026-10-01 (Alpha)
+
+- Native curve coverage found checked recovery failure on a CLAMPED_BEZIER
+  Cascy fixture. Character Point and finger writes now reject that mode anywhere
+  in the scene before snapshot/mutation; retiming no longer accepts it. This
+  is a safety restriction, not a fix for the unresolved native recovery failure.
+- Additional BEZIER and LOW_AMPLITUDE_BEZIER fixtures passed real SDK edits,
+  metadata checks and full-clip recovery on the same local machine.
+- Added Python installation, contract/stdio, dependency and wheel checks in a
+  GitHub Actions Windows/Linux, Python 3.10/3.12 matrix. Hosted CI does not run
+  Cascadeur; its workflow has not yet been executed on GitHub at preparation time.
+
 ## 0.5.0a7 — 2026-10-01 (Alpha)
 
 - Add `edit_impact` to successful curve-preserving offsets. Group actual Point
