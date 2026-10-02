@@ -1,5 +1,22 @@
 # Changelog
 
+## 0.5.0a9 — Unreleased candidate
+
+- Check an existing failed-character-recovery journal before dispatching any
+  scene write, including legacy transforms, key creation, frame changes,
+  playback start and export. Previously only character adapters consulted it.
+- Keep reads, stopping bridge-owned playback and saving a new `.casc` copy
+  available. Save-as does not clear the lock; no automatic retry or unlock is
+  added. The lock remains session-local and cannot restrict native manual edits.
+- Increment write contract revision to 2 because refusal behavior changed while
+  schemas stayed the same. Matching upgraded client and host are required.
+- Add dispatch regression coverage for all write routes, the two escape routes,
+  readback and scene isolation. Native shutdown stability is not fixed here.
+- Local native fault injection reproduced the old frame-write bypass and verified
+  all 17 candidate refusals, unchanged 23-frame readback and the two exceptions.
+  Both stock and candidate processes still had abnormal native shutdown exits;
+  this is not a claim of complete native stability or another-machine support.
+
 ## 0.5.0a8 — 2026-10-01 (Alpha)
 
 - Recorded one native shutdown access violation after successful local

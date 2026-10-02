@@ -11,7 +11,7 @@ import re
 from ..tools.animation_schema import SCHEMAS, WRITE_METHODS
 
 PROTOCOL_VERSION = 1
-WRITE_REVISION = 1
+WRITE_REVISION = 2
 
 
 def schema_fingerprint(schemas):

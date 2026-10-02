@@ -73,9 +73,13 @@ def check_readback(after, params):
 
 def dispatch(view, scene, method, params):
     from . import skeleton, character, playback
+    from ..tools.animation_schema import WRITE_METHODS
+    # A failed character recovery protects the active scene across write routes.
+    # Keep inspection, owned playback stop and a NEW quarantine copy available.
+    if method in WRITE_METHODS and method not in ('stop_animation', 'save_scene_copy'):
+        character.require_recovered(scene)
     if method in ('play_animation','stop_animation'):
         return playback.dispatch(view,scene,method,params)
-    from ..tools.animation_schema import WRITE_METHODS
     if method in WRITE_METHODS:
         playback.require_idle()
     if method in ('get_hand_pose','set_hand_pose_sequence'):

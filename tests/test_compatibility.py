@@ -6,7 +6,7 @@ import uuid
 
 import pytest
 
-from cascadeur_mcp.bridge import host, client
+from cascadeur_mcp.bridge import host, client, compatibility
 from cascadeur_mcp.bridge.capabilities import describe
 from cascadeur_mcp.bridge.protocol import BridgeError, read_json, write_json
 
@@ -73,6 +73,36 @@ def test_matching_contract_writes_with_one_request(tmp_path, monkeypatch):
     assert task.result()['method'] == 'set_current_frame'
     assert dispatched == ['set_current_frame']
     assert len(bridge.seen) == 1
+
+
+def test_previous_revision_same_schema_host_cannot_receive_write(tmp_path, monkeypatch):
+    bridge = host.HostBridge(tmp_path)
+    bridge.publish()
+    descriptor = read_json(tmp_path / 'session.json')
+    descriptor['write_contract']['revision'] = 1
+    write_json(tmp_path / 'session.json', descriptor)
+    task, dispatched = roundtrip(bridge, monkeypatch)
+    with pytest.raises(BridgeError) as caught:
+        task.result()
+    assert caught.value.details['code'] == 'INCOMPATIBLE_HOST'
+    assert dispatched == []
+
+
+def test_previous_revision_same_schema_client_cannot_dispatch_write(tmp_path, monkeypatch):
+    bridge = host.HostBridge(tmp_path)
+    dispatched = []
+    monkeypatch.setattr(host, 'dispatch', lambda *args: dispatched.append(args))
+    rid = uuid.uuid4().hex
+    request = dict(version=1, id=rid, session=bridge.session, token=bridge.token,
+                   expires_at=time.time()+5, method='set_current_frame',
+                   params={'scene':'fixture','frame':0},
+                   write_contract=dict(compatibility.describe(), revision=1))
+    write_json(bridge.folder / (rid + '.request.json'), request)
+    bridge.tick()
+    response = read_json(bridge.folder / (rid + '.response.json'))
+    assert response['error_details']['code'] == 'INCOMPATIBLE_CLIENT'
+    assert response['error_details']['execution_state'] == 'not_started'
+    assert dispatched == []
 
 
 @pytest.mark.parametrize('supplied', [None, {'protocol_version': 1, 'revision': 1, 'schema_sha256': 'a'*64}])

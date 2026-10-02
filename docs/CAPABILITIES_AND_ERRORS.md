@@ -1,8 +1,7 @@
 # Capabilities and structured errors
 
 Structured errors were added in `0.5.0a2`; `0.5.0a3` additionally introduced
-write compatibility on both sides. Both remain in the current Alpha source
-release, `0.5.0a6`.
+write compatibility on both sides. Both remain in the current Alpha source.
 Development validation is limited to the developer's local
 Windows machine; no connection on another machine is certified.
 
@@ -137,6 +136,38 @@ claim that the scene is unchanged. Only explicit typed evidence produces
 A character journal locked after failed recovery continues to report
 `recovery_required` when a later write reaches that guard.
 
+## Scene recovery write gate
+
+The `0.5.0a9` candidate checks that same scene journal at the shared animation
+dispatcher before invoking any write adapter. A failed character recovery now
+also prevents legacy FK/world transforms, key creation, frame selection,
+retiming, finger edits, snapshot creation/restoration, playback start and export.
+Rejections retain `RECOVERY_REQUIRED`, `execution_state: recovery_required`,
+`rollback_verified: false` and `automatic_retry_allowed: false`. Invalid inputs
+and incompatible clients can still be rejected earlier by transport validation.
+
+There are exactly two write-route exceptions:
+
+- `stop_animation` can stop only playback already owned by the bridge; existing
+  playback and scene-identity checks still apply.
+- `save_scene_copy` can save to a new unique `.casc` path for quarantine. Existing
+  path and idle-playback guards still apply. A saved file is not proof of repair.
+
+Read-only tools remain available for inspection. Save-as can change scene_id but
+does not clear the journal tied to the live native scene. No force-unlock, retry,
+extra native API or scene-wrapper cache is introduced.
+
+This gate is triggered by the existing **character** recovery journal. It does
+not detect every possible legacy-adapter failure, restrict native manual edits,
+persist across restart, or stop a request already executing. Recover by normally
+closing and reopening a **known-good full-scene checkpoint**, then verify the
+whole clip before further editing. Reopening the uncertain quarantine file or
+using a one-pose JSON snapshot is not equivalent to full-scene recovery.
+
+The changed refusal semantics require write contract revision **2**. Both host
+and client must be upgraded and restarted even though tool schemas are unchanged.
+Do not change session descriptors to bypass a mismatch.
+
 Timeouts, uncertain request publication, invalid responses and rejected write
 replays are conservative: a missing reply is not proof that the write never
 ran. The `recommended_action` values direct callers to inspect prerequisites,
@@ -197,3 +228,24 @@ failure state, export behavior or visual animation quality. Offline manifest,
 protocol and simulated error-boundary tests remain separate evidence; in
 particular, their recovery-required cases are not claims of native acceptance.
 Host connection on another machine has not been verified.
+
+### Recovery-gate candidate native check (2026-10-02)
+
+On the same local Windows machine, real Cascadeur 2026.2.2 stock `0.5.0a8` and
+candidate `0.5.0a9` processes were compared through the official SDK. A private
+test hook explicitly injected a post-commit verification failure and unavailable
+Undo after a real native edit. The ordinary transaction handler established
+`recovery_required`; the hook did not set the journal lock or invent scene data.
+
+The stock host still accepted `set_current_frame`, changing native frame 10 to 1.
+The candidate rejected all 17 guarded write method names with `RECOVERY_REQUIRED`,
+using schema-valid requests. Full 23-frame readbacks were exactly unchanged after
+those rejections. Reads, stopping an already stopped bridge-owned playback run,
+and saving a new quarantine copy remained available. Save-as did not unlock the
+scene. Healthy candidate edit/restore/playback also passed before fault injection.
+
+This was 179 real MCP calls across two native processes; it does not execute every
+adapter's successful write branch or every parameter variant. Both processes
+subsequently exited with `0xC0000005` after saved-state normal close requests.
+The recovery gate is functionally verified within this scope; native shutdown
+stability remains unresolved. No Computer Use or force termination was used.

@@ -258,15 +258,24 @@ def geometry(scene,cid,frame):
     return {'connection_count':checked,'max_connection_anchor_error':worst}
 
 
+def require_recovered(scene):
+    """Inspect the existing journal without retaining an otherwise unused scene.
+
+    This is a session-local MCP guard, not a native UI or persistent file lock.
+    """
+    entry = _journals.get(id(scene))
+    # journal() retains the native scene, so its id cannot be reused while cached.
+    if entry is not None and entry['locked']:
+        raise BridgeError('RECOVERY_REQUIRED: prior rollback could not be verified',
+                          execution_state='recovery_required', rollback_verified=False)
+
+
 def journal(scene):
     # Keep the native scene alive for identity, reject accidental cross-scene reuse.
     key=id(scene)
     if key not in _journals: _journals[key]={'scene':scene,'entries':[],'locked':False}
-    j=_journals[key]
-    if j['locked']:
-        raise BridgeError('RECOVERY_REQUIRED: prior rollback could not be verified',
-                          execution_state='recovery_required',rollback_verified=False)
-    return j
+    require_recovered(scene)
+    return _journals[key]
 
 
 def save_snapshot(view,scene,cid):

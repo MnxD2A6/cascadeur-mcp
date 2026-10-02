@@ -1,5 +1,13 @@
 # Cascadeur MCP
 
+Candidate `0.5.0a9` extends failed-character-recovery protection to every MCP
+write route on that scene, including legacy transforms, timeline, playback start
+and FBX export. Reads, owned playback stop and saving a new quarantine `.casc`
+remain available. This is a session-local guard, not a persistent/native UI lock.
+Write contract revision is now 2: upgrade and restart both client and host.
+See [recovery protection](docs/CAPABILITIES_AND_ERRORS.md#scene-recovery-write-gate).
+Existing users should follow the [a9 upgrade checklist](docs/UPGRADING.md).
+
 Version `0.5.0a8` adds a fail-closed safety restriction after native
 CLAMPED_BEZIER recovery failed: character Point and finger writes reject scenes
 containing that mode before editing. Retiming no longer accepts it. This does
