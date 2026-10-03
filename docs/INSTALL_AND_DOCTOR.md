@@ -52,6 +52,7 @@ filesystems fail rather than fall back to overwriting an existing file.
 ```powershell
 .\.venv\Scripts\python.exe -m cascadeur_mcp.manage doctor --cascadeur-home $cascadeurHome
 .\.venv\Scripts\python.exe -m cascadeur_mcp.manage doctor --instance c01 --live
+.\.venv\Scripts\python.exe -m cascadeur_mcp.manage doctor --cascadeur-home $cascadeurHome --live --format text
 ```
 
 Default mode reads package metadata, validates the source and session descriptor,
@@ -59,12 +60,22 @@ and optionally inspects the hook. It does not send requests. A valid descriptor
 returns `DESCRIPTOR_VALID_NOT_CONNECTED`; its recorded PID is not proof of a live
 process. No PID liveness probe or stale-session deletion is performed.
 
-`--live` sends only `ping_cascadeur` and `get_scene_info` through the existing
-authenticated bridge, checks the returned PID, and reports frame/object count.
-It writes temporary protocol requests, not scene data. `--timeout` is per request,
-greater than zero and at most 20 seconds; two successful calls can take twice that
-time. The instance defaults to `CASCADEUR_MCP_INSTANCE`, or `c01` when unset.
+`--live` sends only existing read operations: `ping_cascadeur`, `get_scene_info`,
+`get_bridge_capabilities`, and optionally `get_fbx_export_status` when advertised
+as read-only. It checks actual host PID and pinned session identity, reports the
+loaded host version/write contract, and checks native export entitlement without
+exporting a file. It writes temporary protocol requests, not scene data.
+`--timeout` is per request, greater than zero and at most 20 seconds; up to four
+calls can take four times that time. There is no automatic retry.
+The instance defaults to `CASCADEUR_MCP_INSTANCE`, or `c01` when unset.
 The host must have started with the same instance configuration.
+
+On Windows, `--live --cascadeur-home` also reads process metadata through Win32
+APIs, matching the exact selected executable path. This distinguishes a stopped
+selected installation from a running installation with no discovered session.
+Permission-restricted results remain `UNKNOWN`; another installation is not
+mistaken for this one. Static mode never probes processes. This is observation,
+not process control or proof that the bridge loaded.
 
 Output is JSON. Success is exit 0; a failed check is exit 1; CLI syntax errors are
 exit 2. Optional hook inspection can fail even when the separate live connection
@@ -73,7 +84,18 @@ its path alone. Installed scripts are parsed, never executed by the doctor.
 
 | Status | Meaning |
 | --- | --- |
-| `CONNECTED` | The actual Cascadeur bridge replied and returned scene data |
+| `CONNECTED` | Scene reads succeeded and the loaded write contract matches; rig/write success remains untested |
+| `CONNECTED_WITH_WARNINGS` | Read connection succeeded but an optional check is unavailable or the scene is empty |
+| `ACTION_REQUIRED` | A connection/configuration/compatibility check failed; see `diagnostics` |
+| `STATIC_CHECK_ONLY` | Local checks passed; no live host connection was tested |
+| `CASCADEUR_NOT_RUNNING` | No live process for the selected installation was observed; start it normally |
+| `BRIDGE_NOT_DISCOVERED` | Selected installation is running, but no session for this instance was found; check startup hook/source/instance |
+| `HOOK_NOT_INSTALLED` | Close Cascadeur, preview install-host, then apply the reviewed preview |
+| `HOOK_REVIEW_REQUIRED` | Hook differs from the managed template; preserve and review it, even if a live legacy hook works |
+| `INCOMPATIBLE_HOST` | Live reads worked, but loaded write contract differs; upgrade/restart both peers |
+| `CAPABILITIES_UNAVAILABLE` | Reads worked but loaded contract was not checked; treat writes as unverified |
+| `EXPORT_UNAVAILABLE` | Current native export entitlement is false; check official license/sync; other tools can still work |
+| `EXPORT_STATUS_UNAVAILABLE` | Native export entitlement could not be checked; no export was attempted |
 | `NO_DESCRIPTOR` | No session file for that instance; inspect normal host startup |
 | `INVALID_DESCRIPTOR` | Malformed/unsupported descriptor; no token is echoed |
 | `BRIDGE_TIMEOUT` | No response before deadline; liveness is unknown |
@@ -88,11 +110,19 @@ Output still contains local source paths and PIDs: review/redact before sharing.
 `descriptor_write_compatibility` compares the session descriptor's write contract
 to this client (`COMPATIBLE`, `HOST_UPGRADE_REQUIRED`, `INCOMPATIBLE_HOST`, or
 `INVALID_HOST_CONTRACT`). `descriptor_package_version` is a bounded version label
-from that file. Neither proves a live process or a writable rig. The doctor still
-uses only ping and scene reads; its `CONNECTED` status and success exit code refer
-to those checks, not write readiness. Its live `host_package_version` remains
-`NOT_REPORTED`. Use `get_bridge_capabilities` for a manifest from the responding
-host; client metadata is never substituted for host metadata.
+from that file. Neither proves a live process or a writable rig. In live mode,
+`live_write_compatibility` comes from the responding host manifest, and
+`host_package_version` is its bounded loaded version label; client metadata is
+never substituted for host metadata. Missing manifests preserve read diagnostics
+but leave write compatibility `NOT_EVALUATED`. A contract mismatch returns exit 1
+even if the separate scene reads succeeded. Missing export entitlement is a
+warning and does not fail an otherwise successful connection. `write_readiness`
+always remains `NOT_EVALUATED`: no write, recovery, rig or track test was performed.
+
+JSON is the default output and includes fixed `diagnostics` entries with `code`,
+`severity`, `message`, and `next_step`. `--format text` prints a short explanation
+and next step. Local paths and PIDs still appear in JSON; redact them before sharing.
+Both formats omit tokens, scene names, arbitrary errors and host strings.
 
 Upgrade both the external package and host source, then restart both processes.
 Do not edit session descriptors to suppress a mismatch. Old protocol-1 clients

@@ -1,6 +1,21 @@
 # Changelog
 
-## 0.5.0a9 — Unreleased candidate
+## 0.5.0a10 — Unreleased Alpha trial candidate
+
+- Extend the read-only doctor with loaded-host version and write-contract
+  verification plus optional FBX entitlement discovery through existing tools.
+  Matching contracts do not establish native rig write readiness.
+- Add fixed explanations and next steps, and `doctor --format text`. Export
+  unavailability is a warning; write-contract mismatches require action even
+  when scene reads succeed. No scene mutation or automatic repair is added.
+- When `--live --cascadeur-home` is supplied on Windows, read native process
+  metadata to distinguish a stopped selected installation from an undiscovered
+  bridge. Restricted observations remain unknown; no shell or process control.
+- Add a Windows trial checklist and clarify install, upgrade, uninstall and
+  shareable feedback. Cross-machine host validation remains unverified.
+- Keep write-contract revision 2; tool schemas and native adapters are unchanged.
+
+## 0.5.0a9 — 2026-10-02 (Alpha source published)
 
 - Check an existing failed-character-recovery journal before dispatching any
   scene write, including legacy transforms, key creation, frame changes,

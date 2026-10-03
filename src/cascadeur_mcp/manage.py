@@ -135,7 +135,7 @@ def instance_root(instance):
     return absolute_safe(base / 'cascadeur-mcp' / instance)
 
 
-def check_session(root, *, live=False, timeout=5.0):
+def check_session(root, *, live=False, timeout=5.0, _scope=None):
     if not math.isfinite(timeout) or not 0 < timeout <= 20:
         raise MaintenanceError('INVALID_TIMEOUT')
     root = absolute_safe(root)
@@ -154,6 +154,8 @@ def check_session(root, *, live=False, timeout=5.0):
             or not isinstance(data.get('token'), str) or not TOKEN.fullmatch(data['token'])):
         return dict(result, status='INVALID_DESCRIPTOR')
     result['pid'] = data['pid']
+    if _scope is not None:
+        _scope['session'] = data['session']
     from .bridge import compatibility
     result['descriptor_write_compatibility'] = compatibility.status(data.get('write_contract'))
     # Descriptor metadata is not a live response; never echo arbitrary strings.
@@ -167,11 +169,15 @@ def check_session(root, *, live=False, timeout=5.0):
     try:
         client = BridgeClient(root=root, timeout=timeout)
         ping = client.call('ping_cascadeur', {})
+        if _scope is not None and ping.get('session') != _scope['session']:
+            return dict(result, status='HOST_SESSION_CHANGED')
         if (ping.get('host') != 'Cascadeur' or ping.get('live_application') is not True
                 or type(ping.get('pid')) is not int or ping['pid'] != data['pid']):
             return dict(result, status='HOST_IDENTITY_MISMATCH')
         result['pid_liveness'] = 'RESPONDED'
         scene = client.call('get_scene_info', {})
+        if _scope is not None and scene.get('session') != _scope['session']:
+            return dict(result, status='HOST_SESSION_CHANGED')
         if (type(scene.get('pid')) is not int or scene['pid'] != data['pid']
                 or type(scene.get('current_frame')) is not int
                 or type(scene.get('object_count')) is not int or scene['object_count'] < 0):
@@ -214,19 +220,138 @@ def inspect_hook(home, source):
             'source_literal_matches': sources == [str(source)], 'executed': False}
 
 
+def inspect_application(home, *, executable='cascadeur.exe'):
+    """Read Windows process metadata without a shell, signals or process control.
+
+    Match the exact installation, ignore zero-thread retained process objects,
+    and retain UNKNOWN when access restrictions prevent a reliable answer.
+    The executable override exists for native OS tests; it is not a CLI input.
+    """
+    if os.name != 'nt':
+        return {'status': 'NOT_SUPPORTED'}
+    import ctypes
+    from ctypes import wintypes as w
+    class Entry(ctypes.Structure):
+        _fields_ = [('size', w.DWORD), ('usage', w.DWORD), ('pid', w.DWORD),
+                    ('heap', ctypes.c_size_t), ('module', w.DWORD), ('threads', w.DWORD),
+                    ('parent', w.DWORD), ('priority', w.LONG), ('flags', w.DWORD),
+                    ('exe', w.WCHAR * 260)]
+    kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+    kernel.CreateToolhelp32Snapshot.argtypes = [w.DWORD, w.DWORD]
+    kernel.CreateToolhelp32Snapshot.restype = w.HANDLE
+    for name in ('Process32FirstW', 'Process32NextW'):
+        fn = getattr(kernel, name)
+        fn.argtypes = [w.HANDLE, ctypes.POINTER(Entry)]
+        fn.restype = w.BOOL
+    kernel.OpenProcess.argtypes = [w.DWORD, w.BOOL, w.DWORD]
+    kernel.OpenProcess.restype = w.HANDLE
+    kernel.QueryFullProcessImageNameW.argtypes = [w.HANDLE, w.DWORD, w.LPWSTR, ctypes.POINTER(w.DWORD)]
+    kernel.QueryFullProcessImageNameW.restype = w.BOOL
+    kernel.CloseHandle.argtypes = [w.HANDLE]
+    kernel.CloseHandle.restype = w.BOOL
+    snapshot = kernel.CreateToolhelp32Snapshot(2, 0)
+    if snapshot == ctypes.c_void_p(-1).value:
+        return {'status': 'UNKNOWN'}
+    expected = os.path.normcase(str(Path(home) / executable))
+    count, unknown = 0, False
+    try:
+        entry = Entry()
+        entry.size = ctypes.sizeof(entry)
+        found = kernel.Process32FirstW(snapshot, ctypes.byref(entry))
+        if not found:
+            return {'status': 'UNKNOWN'}
+        while found:
+            if entry.exe.casefold() == executable.casefold() and entry.threads > 0:
+                handle = kernel.OpenProcess(0x1000, False, entry.pid)
+                if not handle:
+                    unknown = True
+                else:
+                    try:
+                        buffer = ctypes.create_unicode_buffer(32768)
+                        length = w.DWORD(len(buffer))
+                        if kernel.QueryFullProcessImageNameW(handle, 0, buffer, ctypes.byref(length)):
+                            if os.path.normcase(buffer.value) == expected:
+                                count += 1
+                        else:
+                            unknown = True
+                    finally:
+                        kernel.CloseHandle(handle)
+            found = kernel.Process32NextW(snapshot, ctypes.byref(entry))
+        if ctypes.get_last_error() != 18:  # ERROR_NO_MORE_FILES
+            unknown = True
+    finally:
+        kernel.CloseHandle(snapshot)
+    return {'status': 'RUNNING' if count else 'UNKNOWN' if unknown else 'NOT_RUNNING',
+            'matching_process_count': count}
+
+
+def live_details(root, session, scope, timeout):
+    """Only existing read tools; loaded host metadata and optional entitlement."""
+    from .bridge import compatibility
+    from .diagnostics import issue
+    export = {'status': 'NOT_EVALUATED', 'export_verified': False}
+    issues = []
+    client = BridgeClient(root=root, timeout=timeout)
+    try:
+        caps = client.call('get_bridge_capabilities', {})
+    except (BridgeError, PermissionError, OSError):
+        return export, [issue('CAPABILITIES_UNAVAILABLE', 'warning')]
+    if caps.get('session') != scope.get('session'):
+        return export, [issue('HOST_SESSION_CHANGED')]
+    host = caps.get('host')
+    if (type(host) is not dict or host.get('name') != 'Cascadeur'
+            or type(host.get('pid')) is not int or host['pid'] != session['pid']):
+        return export, [issue('HOST_IDENTITY_MISMATCH')]
+    label = host.get('bridge_package_version')
+    session['host_package_version'] = label if type(label) is str and re.fullmatch(
+        r'[0-9]{1,4}\.[0-9]{1,4}\.[0-9]{1,4}(?:(?:a|b|rc)[0-9]{1,4})?', label) else 'NOT_REPORTED'
+    match = compatibility.status(caps.get('write_contract'))
+    session['live_write_compatibility'] = match
+    if match != 'COMPATIBLE':
+        issues.append(issue(match))
+    operations = caps.get('operations')
+    operation = operations.get('get_fbx_export_status') if type(operations) is dict else None
+    if type(operation) is not dict or operation.get('classification') != 'read':
+        return export, issues + [issue('EXPORT_STATUS_UNAVAILABLE', 'warning')]
+    try:
+        reply = client.call('get_fbx_export_status', {})
+    except (BridgeError, PermissionError, OSError):
+        return export, issues + [issue('EXPORT_STATUS_UNAVAILABLE', 'warning')]
+    if reply.get('session') != scope.get('session'):
+        session['live_write_compatibility'] = 'NOT_EVALUATED'
+        return export, issues + [issue('HOST_SESSION_CHANGED')]
+    if type(reply.get('export_available')) is not bool:
+        return export, issues + [issue('EXPORT_STATUS_UNAVAILABLE', 'warning')]
+    export['status'] = 'AVAILABLE_NOT_VALIDATED' if reply['export_available'] else 'EXPORT_UNAVAILABLE'
+    if not reply['export_available']:
+        issues.append(issue('EXPORT_UNAVAILABLE', 'warning'))
+    return export, issues
+
+
 def doctor(*, source=None, home=None, instance='c01', live=False, timeout=5.0):
     source = source_dir(source)
     sdk = package_version('mcp')
     result = {'ok': True, 'python': '.'.join(map(str, sys.version_info[:3])),
               'client_version': package_version('cascadeur-mcp'), 'mcp_sdk_version': sdk,
               'source': str(source), 'instance': instance, 'cross_machine_validation': 'NOT_VERIFIED',
-              'mode': 'READ_ONLY_LIVE' if live else 'STATIC_ONLY'}
+              'mode': 'READ_ONLY_LIVE' if live else 'STATIC_ONLY',
+              'python_supported': sys.version_info >= (3, 10),
+              'application': {'status': 'NOT_CHECKED'},
+              'export': {'status': 'NOT_EVALUATED', 'export_verified': False},
+              'write_readiness': 'NOT_EVALUATED'}
     if home is not None:
         result['hook'] = inspect_hook(home, source)
-    result['session'] = check_session(instance_root(instance), live=live, timeout=timeout)
+        if live:
+            result['application'] = inspect_application(home)
+    root, scope = instance_root(instance), {}
+    result['session'] = check_session(root, live=live, timeout=timeout, _scope=scope)
+    result['session']['live_write_compatibility'] = 'NOT_EVALUATED'
+    if live and result['session']['status'] == 'CONNECTED':
+        result['export'], result['_live_issues'] = live_details(root, result['session'], scope, timeout)
     result['ok'] = (sdk != 'NOT_INSTALLED' and sys.version_info >= (3, 10)
                     and result['session']['ok'] and result.get('hook', {'ok': True})['ok'])
-    return result
+    from .diagnostics import explain
+    return explain(result)
 
 
 def main(argv=None):
@@ -238,8 +363,9 @@ def main(argv=None):
         cmd.add_argument('--cascadeur-home', required=command != 'doctor', help='Absolute Cascadeur installation directory')
         if command == 'doctor':
             cmd.add_argument('--instance', default=os.environ.get('CASCADEUR_MCP_INSTANCE', 'c01'))
-            cmd.add_argument('--live', action='store_true', help='Send only ping and scene read requests')
+            cmd.add_argument('--live', action='store_true', help='Read ping, scene, loaded contract and optional FBX entitlement')
             cmd.add_argument('--timeout', type=float, default=5.0)
+            cmd.add_argument('--format', choices=('json', 'text'), default='json', help='JSON report or concise reason and next step')
         else:
             cmd.add_argument('--apply', action='store_true', help='Apply the previewed operation; close Cascadeur first')
     args = parser.parse_args(argv)
@@ -256,7 +382,14 @@ def main(argv=None):
         result = {'ok': False, 'status': 'PERMISSION_DENIED'}
     except OSError:
         result = {'ok': False, 'status': 'FILESYSTEM_ERROR'}
-    print(json.dumps(result, ensure_ascii=True, indent=2))
+    if args.command == 'doctor' and 'diagnostics' not in result:
+        from .diagnostics import issue
+        result['diagnostics'] = [issue(result['status'])]
+    if getattr(args, 'format', 'json') == 'text':
+        from .diagnostics import text_report
+        print(text_report(result))
+    else:
+        print(json.dumps(result, ensure_ascii=True, indent=2))
     return 0 if result['ok'] else 1
 
 

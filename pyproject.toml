@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "cascadeur-mcp"
-version = "0.5.0a9"
-description = "C01: a minimal Cascadeur MCP animation bridge PoC"
+version = "0.5.0a10"
+description = "Experimental local MCP bridge for Cascadeur animation workflows"
 readme = "README.md"
 requires-python = ">=3.10"
 license = "MIT"

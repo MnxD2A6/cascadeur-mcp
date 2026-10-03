@@ -1,6 +1,12 @@
 # Cascadeur MCP
 
-Candidate `0.5.0a9` extends failed-character-recovery protection to every MCP
+Trial candidate `0.5.0a10` adds actionable connection diagnostics and a
+[Windows trial guide](docs/TRY_IT.md). It is an Alpha, not a stable release.
+The candidate package is prepared locally; it is not yet published to PyPI or
+as a tagged GitHub Release. Use the supplied source/wheel, not a guessed
+`pip install cascadeur-mcp` command.
+
+Version `0.5.0a9` extends failed-character-recovery protection to every MCP
 write route on that scene, including legacy transforms, timeline, playback start
 and FBX export. Reads, owned playback stop and saving a new quarantine `.casc`
 remain available. This is a session-local guard, not a persistent/native UI lock.
@@ -66,17 +72,17 @@ MCP client → official MCP Python SDK (stdio)
 
 **Alpha research prototype, not a general production animation SDK.** Local
 development validation used Windows, Cascadeur 2026.2.2 and Python 3.12.
-Current source version: `0.5.0a8` (Alpha).
+Current source version: `0.5.0a10` (Alpha trial candidate).
 **Validation has only been performed on the developer's local machine.
 Cascadeur host connection on other machines has NOT been verified.** A clean
 virtual-environment installation test on that same machine does not establish
 cross-machine host compatibility.
 
-Native shutdown stability remains under investigation. One local session
-completed edit/play/restore/save checks but exited with `0xC0000005` in
-`Qt6Core.dll` after a normal close request. Two isolated follow-up checks
-exited normally; they do not establish a fix or the native cause. Original
-source scenes remained unchanged. This alpha does not claim production-safe
+Native shutdown stability remains under investigation. Local sessions have
+both exited normally and failed with `0xC0000005` in `Qt6Core.dll` after normal
+close requests. A no-MCP control reproduced the failure after a vendor-API
+save; this narrows the investigation but does not establish its root cause or
+prove MCP can never affect it. This alpha does not claim production-safe
 native shutdown across every workflow.
 
 The GitHub workflow in `.github/workflows/python-tests.yml` is configured to run installation,
@@ -126,7 +132,7 @@ Then start Cascadeur and open a scene. The hook schedules the bridge on
 Cascadeur's Qt main thread. Check the connection:
 
 ```powershell
-.\.venv\Scripts\python.exe -m cascadeur_mcp.manage doctor --live
+.\.venv\Scripts\python.exe -m cascadeur_mcp.manage doctor --cascadeur-home $cascadeurHome --live --format text
 ```
 
 See [installation and diagnostics](docs/INSTALL_AND_DOCTOR.md) for instances,
@@ -189,6 +195,11 @@ not current execution readiness. Scene, rig, track and license checks remain
 `NOT_EVALUATED`; the Cascadeur application version is `NOT_REPORTED`. See
 [capabilities and structured errors](docs/CAPABILITIES_AND_ERRORS.md) for the
 loaded-host contract, error fields and conservative handling of older hosts.
+
+Doctor now reads the loaded host's contract and, when advertised as read-only,
+the current FBX entitlement. A matching contract does not establish rig safety
+or successful export. JSON remains the default; `--format text` explains each
+observed problem with a next step. See the [diagnostic statuses](docs/INSTALL_AND_DOCTOR.md).
 
 Finger input uses local unit quaternions `[w,x,y,z]` and named finger segments,
 not those world-position targets. Read [hand controls](docs/HAND_CONTROLS.md)
