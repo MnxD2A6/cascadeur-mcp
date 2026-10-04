@@ -1,5 +1,9 @@
 # Cascadeur MCP
 
+Source candidate `0.5.0a11` adds advisory character edit preflight and a
+[long-session checkpoint workflow](docs/EDIT_READINESS_AND_CHECKPOINTS.md).
+It is not yet published; the downloadable Alpha trial remains `0.5.0a10`.
+
 Alpha trial `0.5.0a10` adds actionable connection diagnostics and a
 [Windows trial guide](docs/TRY_IT.md). It is an Alpha, not a stable release.
 Source and wheel packages are available in the
@@ -73,7 +77,7 @@ MCP client → official MCP Python SDK (stdio)
 
 **Alpha research prototype, not a general production animation SDK.** Local
 development validation used Windows, Cascadeur 2026.2.2 and Python 3.12.
-Current source version: `0.5.0a10` (Alpha trial prerelease).
+Current source version: `0.5.0a11` (unpublished candidate).
 **Validation has only been performed on the developer's local machine.
 Cascadeur host connection on other machines has NOT been verified.** A clean
 virtual-environment installation test on that same machine does not establish

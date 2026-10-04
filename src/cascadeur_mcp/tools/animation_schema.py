@@ -98,11 +98,18 @@ SCHEMAS.update(hand_schema.SCHEMAS)
 DESCRIPTIONS.update(hand_schema.DESCRIPTIONS)
 WRITE_METHODS.add('set_hand_pose_sequence')
 
+from . import readiness_schema
+SCHEMAS.update(readiness_schema.SCHEMAS)
+DESCRIPTIONS.update(readiness_schema.DESCRIPTIONS)
+
 
 def validate(method, params):
     spec = SCHEMAS[method]
     if set(params) - set(spec['properties']) or set(spec['required']) - set(params):
         raise ValueError('unexpected or missing fields')
+    if method in readiness_schema.SCHEMAS:
+        readiness_schema.validate(params)
+        return dict(params)
     if method in hand_schema.SCHEMAS:
         hand_schema.validate(method,params)
         return dict(params)

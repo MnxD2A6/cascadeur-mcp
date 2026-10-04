@@ -177,6 +177,16 @@ yet established. The guard refuses character Point/finger writes before capture
 or mutation if any track contains that mode; it does not claim repaired Undo.
 See [curve evidence and limits](docs/CURVE_PRESERVING_EDITING.md).
 
+## Advisory preflight and checkpoint workflow (a11 candidate)
+
+The a11 advisory preflight reuses the existing verified saved-scene identity,
+Cascy semantic mapping, native track/section/IK-FK reads, curve preflight and
+full-state capture listed above. It introduces no Cascadeur API call. Remaining
+capacity comes from this host process's existing private snapshot/journal maps;
+these are MCP bookkeeping, not a native Undo-capacity query. The checkpoint
+workflow reuses the existing `view.save(path)` adapter and normal application startup; no restart,
+open-scene, journal reset or license bypass API is exposed.
+
 ## Third-party code and attribution
 
 The separate `ThatGuyTHD/animation-mcp` repository was reviewed locally for

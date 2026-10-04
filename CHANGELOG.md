@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.5.0a11 — Unreleased candidate
+
+- Add read-only `get_character_edit_readiness` for three existing semantic Point
+  write policies. It reports actual scene/rig/track blockers and remaining
+  session snapshot / per-scene transaction capacity without allocating history.
+- Reuse the real writer's native track guards; every write still checks current
+  state. Advisory preflight does not validate future targets or authorize writes.
+- Document whole-clip checkpoints, fresh-session identity discovery and readback.
+  No automatic restart, retry, journal unlock or snapshot deletion is added.
+- Retain write-contract revision 2 and all existing capacity/recovery bounds.
+
 ## 0.5.0a10 — 2026-10-04 (Alpha trial prerelease)
 
 - Extend the read-only doctor with loaded-host version and write-contract

@@ -82,6 +82,9 @@ def dispatch(view, scene, method, params):
         return playback.dispatch(view,scene,method,params)
     if method in WRITE_METHODS:
         playback.require_idle()
+    if method == 'get_character_edit_readiness':
+        from .readiness import inspect
+        return inspect(view, scene, params)
     if method in ('get_hand_pose','set_hand_pose_sequence'):
         from . import hands
         return hands.dispatch(view,scene,method,params)

@@ -41,6 +41,14 @@ def describe():
             for method in sorted(METHODS)
         },
         'read_features': {
+            'get_character_edit_readiness': {
+                'advisory_only': True,
+                'operations': list(SCHEMAS['get_character_edit_readiness']['properties']['operation']['enum']),
+                'checks': 'saved identity, full semantic rig, stored frames, native tracks, recovery state and remaining capacity',
+                'does_not_evaluate': ['new target feasibility', 'external playback', 'native write success'],
+                'capacity_scope': 'session-wide snapshots and per-scene outstanding transactions; no reservations',
+                'recheck': 'each actual write retains all native safety checks',
+            },
             'get_semantic_pose': {
                 'roles': list(SCHEMAS['get_semantic_pose']['properties']['roles']['items']['enum']),
                 'roles_max': SCHEMAS['get_semantic_pose']['properties']['roles']['maxItems'],

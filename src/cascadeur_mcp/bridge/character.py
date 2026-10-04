@@ -360,6 +360,19 @@ def set_pose(view,scene,cid,frame,pose):
     return {**native,**result,'mcp_calls_for_pose_write':1}
 
 
+def writable_layers(scene,owned):
+    """Read the same native track guards for advisory preflight and real writes."""
+    layers={lid:layer for lid,layer in scene.layers_viewer().layers_map().items() if set(layer.obj_ids)&owned}
+    if any(layer.is_locked or set(layer.obj_ids)-owned for layer in layers.values()):
+        raise BridgeError('UNSAFE_TRACK: locked or shared with another character')
+    if any(int(s.interval.interpolation)==7 for layer in layers.values() for s in layer.sections.values()):
+        raise BridgeError('UNSUPPORTED_AI_INTERPOLATION: no AI motion features in this phase')
+    if any(int(s.interval.common.ik_fk)!=0 or (s.key is not None and int(s.key.common.ik_fk)!=0)
+           for layer in layers.values() for s in layer.sections.values()):
+        raise BridgeError('UNSUPPORTED_RIG_MODE: only verified native IK Point tracks are writable')
+    return layers
+
+
 def set_sequence(view,scene,cid,entries,postcondition=None,configure_tracks=None,after_interpolation=None,
                  *,write_control_ids=None,preserve_existing_keys=False,recovery_postcondition=None):
     """One native transaction, including every frame and postcondition.
@@ -385,15 +398,7 @@ def set_sequence(view,scene,cid,entries,postcondition=None,configure_tracks=None
         raise BridgeError('INVALID_CONTROL_SELECTION: require a nonempty native Point subset',execution_state='not_started')
     if preserve_existing_keys and configure_tracks is not None:
         raise BridgeError('INVALID_EDIT_POLICY: preserving edits cannot configure tracks',execution_state='not_started')
-    layers={lid:layer for lid,layer in lv.layers_map().items() if set(layer.obj_ids)&owned}
-    if any(layer.is_locked or set(layer.obj_ids)-owned for layer in layers.values()):
-        raise BridgeError('UNSAFE_TRACK: locked or shared with another character')
-    # Preserve original IK/FK and fixation settings. Reject AI interpolation entirely.
-    if any(int(s.interval.interpolation)==7 for layer in layers.values() for s in layer.sections.values()):
-        raise BridgeError('UNSUPPORTED_AI_INTERPOLATION: no AI motion features in this phase')
-    if any(int(s.interval.common.ik_fk)!=0 or (s.key is not None and int(s.key.common.ik_fk)!=0)
-           for layer in layers.values() for s in layer.sections.values()):
-        raise BridgeError('UNSUPPORTED_RIG_MODE: only verified native IK Point tracks are writable')
+    layers=writable_layers(scene,owned)
     j=journal(scene)
     if len(j['entries'])>=8: raise BridgeError('TRANSACTION_LIMIT: restore a snapshot or save/restart after 8 outstanding character transactions')
     snapshot=save_snapshot(view,scene,cid)
