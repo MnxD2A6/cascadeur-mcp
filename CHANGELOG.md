@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.5.0a10 — Unreleased Alpha trial candidate
+## 0.5.0a10 — 2026-10-04 (Alpha trial prerelease)
 
 - Extend the read-only doctor with loaded-host version and write-contract
   verification plus optional FBX entitlement discovery through existing tools.

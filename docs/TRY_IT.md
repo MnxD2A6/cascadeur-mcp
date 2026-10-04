@@ -1,6 +1,6 @@
 # Windows Alpha trial guide
 
-This guide targets the supplied 0.5.0a10 source/wheel candidate. It is not a
+This guide targets the supplied 0.5.0a10 source/wheel prerelease. It is not a
 stable release or a claim that PyPI contains this package. Cascadeur host
 connection has only been validated on the developer's local Windows machine;
 other machines remain unverified. Testing a fresh Python environment locally
@@ -33,7 +33,7 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -c "import cascadeur_mcp; print(cascadeur_mcp.__version__)"
 ```
 
-Expected candidate version: `0.5.0a10`. No activation script is required.
+Expected trial version: `0.5.0a10`. No activation script is required.
 Developers may instead install `".[test]"` and run `python -m pytest -q`.
 
 Alternatively, create the external environment in a permanent directory and

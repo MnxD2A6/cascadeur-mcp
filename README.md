@@ -1,9 +1,10 @@
 # Cascadeur MCP
 
-Trial candidate `0.5.0a10` adds actionable connection diagnostics and a
+Alpha trial `0.5.0a10` adds actionable connection diagnostics and a
 [Windows trial guide](docs/TRY_IT.md). It is an Alpha, not a stable release.
-The candidate package is prepared locally; it is not yet published to PyPI or
-as a tagged GitHub Release. Use the supplied source/wheel, not a guessed
+Source and wheel packages are available in the
+[GitHub prerelease](https://github.com/ikun2018/cascadeur-mcp/releases/tag/v0.5.0a10).
+The package is not published to PyPI. Use the supplied source/wheel, not a guessed
 `pip install cascadeur-mcp` command.
 
 Version `0.5.0a9` extends failed-character-recovery protection to every MCP
@@ -72,7 +73,7 @@ MCP client → official MCP Python SDK (stdio)
 
 **Alpha research prototype, not a general production animation SDK.** Local
 development validation used Windows, Cascadeur 2026.2.2 and Python 3.12.
-Current source version: `0.5.0a10` (Alpha trial candidate).
+Current source version: `0.5.0a10` (Alpha trial prerelease).
 **Validation has only been performed on the developer's local machine.
 Cascadeur host connection on other machines has NOT been verified.** A clean
 virtual-environment installation test on that same machine does not establish

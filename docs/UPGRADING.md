@@ -1,7 +1,7 @@
 # Upgrading the Alpha bridge
 
-The a9 source was published on main on 2026-10-02. The a10 trial package is an
-unreleased candidate until publication. Obtain the reviewed source or supplied
+The a9 source was published on main on 2026-10-02. The a10 Alpha trial is available
+as a GitHub prerelease. Obtain its source or supplied
 wheel first; do not assume a package index provides it. The following source
 checkout steps target a10. For wheel installation, use the matching wheel path
 in place of the editable-install command.
@@ -27,7 +27,7 @@ This adds a recovery write gate; it does not fix native shutdown crashes.
    .\.venv\Scripts\python.exe -c "import cascadeur_mcp; from cascadeur_mcp.bridge.compatibility import describe; print(cascadeur_mcp.__version__); print(describe())"
    ```
 
-   Expected a10 candidate version: `0.5.0a10`; write-contract revision: `2`.
+   Expected a10 trial version: `0.5.0a10`; write-contract revision: `2`.
    These are local package checks, not a connection test.
 4. A managed hook already pointing to this same `src` path does not need to be
    overwritten. Use `install-host` **without** `--apply` to inspect it, following
@@ -82,4 +82,4 @@ checkpoint and read it back before editing.
 
 Validation is limited to one developer machine. A fresh local Python environment
 is not second-machine Cascadeur host validation. Native shutdown access violations
-remain unresolved; this candidate is not a production-stability guarantee.
+remain unresolved; this prerelease is not a production-stability guarantee.
