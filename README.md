@@ -1,13 +1,11 @@
 # Cascadeur MCP
 
-Source candidate `0.5.0a11` adds advisory character edit preflight and a
+Alpha trial `0.5.0a11` adds advisory character edit preflight and a
 [long-session checkpoint workflow](docs/EDIT_READINESS_AND_CHECKPOINTS.md).
-It is not yet published; the downloadable Alpha trial remains `0.5.0a10`.
-
-Alpha trial `0.5.0a10` adds actionable connection diagnostics and a
+It also includes actionable connection diagnostics and a
 [Windows trial guide](docs/TRY_IT.md). It is an Alpha, not a stable release.
 Source and wheel packages are available in the
-[GitHub prerelease](https://github.com/ikun2018/cascadeur-mcp/releases/tag/v0.5.0a10).
+[GitHub prerelease](https://github.com/MnxD2A6/cascadeur-mcp/releases/tag/v0.5.0a11).
 The package is not published to PyPI. Use the supplied source/wheel, not a guessed
 `pip install cascadeur-mcp` command.
 
@@ -17,7 +15,7 @@ and FBX export. Reads, owned playback stop and saving a new quarantine `.casc`
 remain available. This is a session-local guard, not a persistent/native UI lock.
 Write contract revision is now 2: upgrade and restart both client and host.
 See [recovery protection](docs/CAPABILITIES_AND_ERRORS.md#scene-recovery-write-gate).
-Existing users should follow the [a9 upgrade checklist](docs/UPGRADING.md).
+Existing users should follow the [upgrade checklist](docs/UPGRADING.md).
 
 Version `0.5.0a8` adds a fail-closed safety restriction after native
 CLAMPED_BEZIER recovery failed: character Point and finger writes reject scenes
@@ -48,6 +46,9 @@ MCP client → official MCP Python SDK (stdio)
 
 - `get_bridge_capabilities`: read the responding host's loaded bridge version,
   operation classifications, limits and restrictions without probing a rig or license.
+- `get_character_edit_readiness`: read scene/rig/track blockers and remaining
+  snapshot/transaction capacity before three supported semantic Point edit
+  policies. This advisory read allocates no history; real writes always recheck.
 - Structured execution errors alongside the existing text and MCP error flag,
   including unknown write outcomes and explicitly verified recovery states.
 - Bilateral write-contract checks: outdated or incompatible peers cannot write;
@@ -77,7 +78,7 @@ MCP client → official MCP Python SDK (stdio)
 
 **Alpha research prototype, not a general production animation SDK.** Local
 development validation used Windows, Cascadeur 2026.2.2 and Python 3.12.
-Current source version: `0.5.0a11` (unpublished candidate).
+Current source version: `0.5.0a11` (Alpha trial prerelease).
 **Validation has only been performed on the developer's local machine.
 Cascadeur host connection on other machines has NOT been verified.** A clean
 virtual-environment installation test on that same machine does not establish
@@ -187,8 +188,10 @@ A typical editing sequence is:
    `ping_cascadeur()` and `get_scene_info()` to check the host and active scene.
 2. `list_characters()` to discover current scene and character IDs.
 3. `get_rig_semantics(character_id)` and `get_semantic_pose(character_id, frame)`.
-4. Save a native scene copy and rediscover its scene ID, then submit the named
-   Point targets through `set_pose_sequence(scene_id, character_id, poses)`.
+4. Save a native scene copy and rediscover its scene ID. Inspect prerequisites
+   with `get_character_edit_readiness`, then submit the named Point targets
+   through `set_pose_sequence(scene_id, character_id, poses)`. A passed preflight
+   does not validate new targets or guarantee a successful write.
 5. Read the solved results and inspect real playback before accepting changes.
 
 Discover full signatures with MCP `tools/list`; do not reuse stale IDs or assume

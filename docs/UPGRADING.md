@@ -1,14 +1,13 @@
 # Upgrading the Alpha bridge
 
-The a9 source was published on main on 2026-10-02. The a10 Alpha trial is available
-as a GitHub prerelease. Obtain its source or supplied
+The a11 Alpha trial is available as a GitHub prerelease. Obtain its source or supplied
 wheel first; do not assume a package index provides it. The following source
-checkout steps target a10. For wheel installation, use the matching wheel path
+checkout steps target a11. For wheel installation, use the matching wheel path
 in place of the editable-install command.
 
 The a8-to-a9 write contract changed from revision **1** to **2**, while tool
-schemas stayed the same. a10 retains revision 2 and changes only the external
-diagnostic CLI and trial documentation. Upgrade **both** the external MCP server and Cascadeur's bridge source,
+schemas stayed the same. a11 retains revision 2 and adds advisory edit readiness
+using existing native read APIs and shared track guards. Upgrade **both** the external MCP server and Cascadeur's bridge source,
 then restart both processes. Matching version labels alone are insufficient.
 This adds a recovery write gate; it does not fix native shutdown crashes.
 
@@ -27,7 +26,7 @@ This adds a recovery write gate; it does not fix native shutdown crashes.
    .\.venv\Scripts\python.exe -c "import cascadeur_mcp; from cascadeur_mcp.bridge.compatibility import describe; print(cascadeur_mcp.__version__); print(describe())"
    ```
 
-   Expected a10 trial version: `0.5.0a10`; write-contract revision: `2`.
+   Expected a11 trial version: `0.5.0a11`; write-contract revision: `2`.
    These are local package checks, not a connection test.
 4. A managed hook already pointing to this same `src` path does not need to be
    overwritten. Use `install-host` **without** `--apply` to inspect it, following
@@ -41,13 +40,17 @@ This adds a recovery write gate; it does not fix native shutdown crashes.
 Run `python -m cascadeur_mcp.manage doctor --live` with the configured environment
 and instance. A successful read connection alone does not establish write readiness.
 
-Through the MCP client, call `get_bridge_capabilities()` with `{}`. The responding
-after a full matched a10 installation the host should report
-`host.bridge_package_version: 0.5.0a10` and
+Through the MCP client, call `get_bridge_capabilities()` with `{}`. After a full
+matched a11 installation, the responding host should report
+`host.bridge_package_version: 0.5.0a11` and
 `write_contract.revision: 2`; the full write contract must match the local one,
 including its schema hash. Then use `get_scene_info()` and `list_characters()` to
 rediscover current scene and character IDs. Do not reuse a previous session's
 scene ID or in-memory snapshot ID.
+
+Before a supported semantic Point write, inspect
+[edit readiness and checkpoint capacity](EDIT_READINESS_AND_CHECKPOINTS.md).
+The new tool is advisory: real writes recheck and do not reserve capacity.
 
 `INCOMPATIBLE_HOST` or `INCOMPATIBLE_CLIENT` means one side still uses the wrong
 contract. Check both configured source paths and restart both processes. Never

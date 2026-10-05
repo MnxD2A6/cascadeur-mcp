@@ -1,6 +1,6 @@
 # Advisory edit readiness and long-session checkpoints
 
-The unpublished `0.5.0a11` candidate adds one read-only tool. It does not add
+Alpha trial `0.5.0a11` adds one read-only tool. It does not add
 automatic recovery, checkpoint loading, restart, history deletion or new native
 APIs. Install/restart matching client and host sources and discover the loaded
 host manifest before using a new read feature. Write-contract revision 2 remains.

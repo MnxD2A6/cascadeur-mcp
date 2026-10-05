@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.5.0a11 — Unreleased candidate
+## 0.5.0a11 — 2026-10-05 (Alpha trial prerelease)
 
 - Add read-only `get_character_edit_readiness` for three existing semantic Point
   write policies. It reports actual scene/rig/track blockers and remaining
