@@ -198,3 +198,40 @@ The official MCP Python SDK and pytest are installed as dependencies through
 `pyproject.toml`, not vendored into this repository. Their installed distributions
 retain their own license notices. Python and Cascadeur must be installed
 separately; this project's MIT license does not relicense them or their assets.
+
+## Sampled motion and native boundaries (a12)
+
+The sequence extension reuses the previously verified Point/data writes,
+`scene.modify_update`, rig updater, interpolation, capture and guarded native
+Undo APIs. It adds no executable input or body-Joint write API. All points and
+frames are validated before mutation; the complete list is submitted to one
+existing native transaction and its actual Point hashes are returned.
+
+Newly exercised native properties are `csc.view.AnimationBoundary.first_frame`,
+`last_frame`, `first_visible_frame`, `last_visible_frame`, obtained from
+`csc.view.Scene.animation_boundary()`. Source: official installed Cascadeur
+2026.2.2 stubs, `resources/scripts/stubs/csc/view/__init__.pyi`, AnimationBoundary
+property declarations. Both setters and measured native playback were exercised
+locally. Changing only the playback end left a 64-frame scene playing/updating
+within its old 0–55 visible range; setting all four properties yielded measured
+0–63 playback and checked full-state Undo restoration. This is local evidence,
+not a guarantee for other Cascadeur versions or machines.
+
+`get_character_skeleton(include_track_sections=false)` uses the same verified
+hierarchy/binding/constraint/layer reads and removes only per-key section details
+from its response. Track membership, key indices and the full skeleton remain.
+
+## Persistent explicit recovery fence (a13)
+
+`get_recovery_status` reuses the existing verified `character.capture` model/data,
+setting, topology and captured track/section reads. It introduces no new Cascadeur
+API call. Disk checksums, bounded JSON, request-scoped fencing and successful-write
+acknowledgement are our own Python bookkeeping, not vendor API or native UI locks.
+
+Local 2026-10-07 SDK/native tests injected one post-commit verification and Undo
+failure after a real Point change. A new native process reopening the changed
+quarantine rejected both a semantic offset and legacy timeline write; all 23
+frames remained unchanged. A third process opened the verified pre-failure
+checkpoint, matched complete recorded state, performed a normal offset and checked
+snapshot restore. One of three native closes still crashed; this is not a shutdown
+fix, automatic scene-opening API or coverage of all mid-write failures.

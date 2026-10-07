@@ -12,7 +12,7 @@ The expected layout contains `cascadeur.exe` and
 `resources/scripts/python/events/application_started/`.
 
 ```powershell
-$cascadeurHome = 'D:\Apps\Cascadeur' # replace with your actual installation
+$cascadeurHome = Read-Host 'Enter your Cascadeur installation folder'
 .\.venv\Scripts\python.exe -m cascadeur_mcp.manage install-host --cascadeur-home $cascadeurHome
 .\.venv\Scripts\python.exe -m cascadeur_mcp.manage install-host --cascadeur-home $cascadeurHome --apply
 ```
@@ -48,6 +48,11 @@ a filesystem supporting hard links for exclusive atomic publication; unsupported
 filesystems fail rather than fall back to overwriting an existing file.
 
 ## Doctor
+
+Version a13 also inspects persistent failed-recovery records locally.
+`RECOVERY_FENCE_PRESENT` means call the read-only `get_recovery_status` after
+opening the latest verified native checkpoint. Doctor does not compare complete
+scene state and never clears the record. See [persistent recovery](PERSISTENT_RECOVERY.md).
 
 ```powershell
 .\.venv\Scripts\python.exe -m cascadeur_mcp.manage doctor --cascadeur-home $cascadeurHome

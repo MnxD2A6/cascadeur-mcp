@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.5.0a13 — 2026-10-07 (Alpha source update)
+
+- Persist explicit unverified character recovery state across host restarts.
+  Reopened quarantine is blocked; complete matching pre-failure native model
+  state is required before editing can proceed. No unchecked unlock is added.
+- Add read-only `get_recovery_status`; status reads retain the fence.
+- Doctor reports persistent/corrupt recovery records with actionable advice,
+  without exposing model data. Existing install conflict protections remain.
+- Write-contract revision 3 requires matching restarted peers. Native shutdown,
+  arbitrary mid-write crashes and other-machine installation remain unverified.
+
+## 0.5.0a12 — 2026-10-06 (included in the a13 source update)
+
+- Opt-in complete sampled Point sequences: 1–64 frames, one native transaction,
+  bounded response hashes, existing rig/rollback/message/Undo limits preserved.
+- Check full playback/visible timeline boundaries before sampled writes;
+  native playback now sets all four documented boundary properties. Locally
+  observed 0→63 playback and full-scene recovery after an invalid last frame.
+- Optional omission of skeleton track-section details for large clips.
+- Reference reconstruction remains separate research. No video-to-animation
+  accuracy, physical contacts, arbitrary rigs or cross-machine validation claimed.
+
+
 ## 0.5.0a11 — 2026-10-05 (Alpha trial prerelease)
 
 - Add read-only `get_character_edit_readiness` for three existing semantic Point

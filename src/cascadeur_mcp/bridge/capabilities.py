@@ -41,6 +41,12 @@ def describe():
             for method in sorted(METHODS)
         },
         'read_features': {
+            'get_recovery_status': {
+                'read_only': True,
+                'persistent_fence': 'explicit failed character rollback; survives host restart within this MCP instance',
+                'checkpoint_verification': 'complete recorded model state, topology and captured track metadata; read does not clear fence',
+                'not_covered': ['arbitrary unexpected mid-write crash', 'power loss', 'native manual editing', 'other MCP instances'],
+            },
             'get_character_edit_readiness': {
                 'advisory_only': True,
                 'operations': list(SCHEMAS['get_character_edit_readiness']['properties']['operation']['enum']),
@@ -99,6 +105,8 @@ def describe():
             },
             'object_page_size_max': 200,
             'legacy_object_frame_index_max': SCHEMAS['set_current_frame']['properties']['frame']['maximum'],
+            'pose_sequence_ordinary_frames_max': 8,
+            'pose_sequence_sampled_frames_max': 64,
             'pose_sequence_frames_max': SCHEMAS['set_pose_sequence']['properties']['poses']['maxItems'],
             'semantic_read_sequence_frames_max': SCHEMAS['get_semantic_pose_sequence']['properties']['frames']['maxItems'],
             'semantic_offset_sequence_frames_max': SCHEMAS['offset_semantic_pose_sequence']['properties']['frames']['maxItems'],
@@ -128,6 +136,7 @@ def describe():
             'frames': 'Frames must already exist. Sequence writes do not extend the timeline. Input frame-index bounds do not prove that a scene contains those frames.',
             'joint_writes': 'Named-object writes require unique names and isolated unlocked tracks. set_transform requires an existing key. Joint subtree writes require a pure topmost Joint tree, unit scale, two endpoint keys and linear FK sections (terminal STEP allowed).',
             'character_writes': 'set_character_pose requires every native Point control; semantic patches merge into that complete target set. Point writes require exclusive unlocked IK tracks and no AI interpolation. Semantic patches use validated cascy-points-v1 topology and native Point world positions; driven body Joint states are read-only.',
+            'sampled_motion': 'Explicit sampled_motion=true accepts 1-64 increasing complete semantic Point poses with rigid limb-control geometry. Requires full stored visible timeline before snapshot/mutation. One native transaction; bounded summary hashes; read actual frames with get_semantic_pose_sequence. Ordinary default stays 1-8. No timeline extension.',
             'relative_edits': 'offset_semantic_pose_sequence translates every Point slot of each selected role in world scene units from each frame\'s current state. Final absolute targets are validated before a single checked transaction. Repeating a call accumulates the delta; no automatic retry is permitted.',
             'hand_writes': 'Finger local unit quaternions require validated Cascy names, parent chains, animated rotation data and unlocked finger-only tracks. Hand Point targets do not curl fingers.',
             'retiming': 'All character tracks must have exactly the supplied synchronized keys; endpoints stay fixed. Supported requested interpolation: LINEAR, BEZIER, LOW_AMPLITUDE_BEZIER. Optional contact stabilization requires the supported stationary left-foot/right-toe profile.',

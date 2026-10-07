@@ -7,6 +7,7 @@ PHASES = {'client_validation', 'client_session', 'client_publish', 'client_respo
 ID = re.compile(r'[0-9a-f]{32}\Z')
 CODE = re.compile(r'[A-Z][A-Z0-9_]{1,63}\Z')
 MESSAGES = {
+    'FULL_TIMELINE_RANGE_REQUIRED': 'Native playback and visible boundaries must cover the stored clip before sampled motion. Play 0..frame_count-1, stop/verify, then retry only after correcting this precondition.',
     'UNSUPPORTED_CLAMPED_RECOVERY': 'CLAMPED_BEZIER recovery failed local native verification; no edit started. Preserve the scene and use a supported clip.',
     'EDIT_IMPACT_UNAVAILABLE': 'Native edit-impact evidence could not be produced; inspect transaction recovery evidence.',
     'CURVE_KEY_REQUIRED': 'Choose frames that already have keys on the edited tracks; no keys were added.',

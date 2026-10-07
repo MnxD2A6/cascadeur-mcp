@@ -348,6 +348,17 @@ def doctor(*, source=None, home=None, instance='c01', live=False, timeout=5.0):
     result['session']['live_write_compatibility'] = 'NOT_EVALUATED'
     if live and result['session']['status'] == 'CONNECTED':
         result['export'], result['_live_issues'] = live_details(root, result['session'], scope, timeout)
+    from .bridge.recovery import read as read_recovery
+    from .diagnostics import issue
+    try:
+        fence = read_recovery(root)
+        result['recovery'] = {'status':'FENCE_PRESENT_NATIVE_CHECK_REQUIRED' if fence else 'NO_PERSISTENT_FENCE',
+                              'native_checkpoint_verified':False}
+        if fence:
+            result.setdefault('_live_issues', []).append(issue('RECOVERY_FENCE_PRESENT'))
+    except Exception:
+        result['recovery'] = {'status':'INVALID_RECOVERY_RECORD', 'native_checkpoint_verified':False}
+        result.setdefault('_live_issues', []).append(issue('INVALID_RECOVERY_RECORD'))
     result['ok'] = (sdk != 'NOT_INSTALLED' and sys.version_info >= (3, 10)
                     and result['session']['ok'] and result.get('hook', {'ok': True})['ok'])
     from .diagnostics import explain

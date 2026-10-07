@@ -54,7 +54,7 @@ offline dependency bundle. Do not install the SDK or a replacement Qt into Casca
 Save your scenes and close Cascadeur normally. Replace the installation path:
 
 ```powershell
-$cascadeurHome = 'D:\Apps\Cascadeur'
+$cascadeurHome = Read-Host 'Enter your Cascadeur installation folder'
 .\.venv\Scripts\python.exe -m cascadeur_mcp.manage install-host --cascadeur-home $cascadeurHome
 .\.venv\Scripts\python.exe -m cascadeur_mcp.manage install-host --cascadeur-home $cascadeurHome --apply
 ```

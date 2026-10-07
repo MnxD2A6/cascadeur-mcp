@@ -1,19 +1,33 @@
 # Cascadeur MCP
 
-Alpha trial `0.5.0a11` adds advisory character edit preflight and a
+Source Alpha `0.5.0a13` on `main` includes opt-in complete sampled motion,
+native playback/visible range coverage, and persistent failed-recovery protection.
+See [sampled motion](docs/SAMPLED_MOTION.md) and
+[persistent recovery](docs/PERSISTENT_RECOVERY.md).
+
+The earlier packaged Alpha trial `0.5.0a11` added advisory character edit preflight and a
 [long-session checkpoint workflow](docs/EDIT_READINESS_AND_CHECKPOINTS.md).
 It also includes actionable connection diagnostics and a
 [Windows trial guide](docs/TRY_IT.md). It is an Alpha, not a stable release.
-Source and wheel packages are available in the
+Its source and wheel packages remain available in the
 [GitHub prerelease](https://github.com/MnxD2A6/cascadeur-mcp/releases/tag/v0.5.0a11).
-The package is not published to PyPI. Use the supplied source/wheel, not a guessed
+For a13, use this repository's current source and the installation steps below;
+the a11 wheel does not contain the new features.
+The package is not published to PyPI. Use the matching source/wheel, not a guessed
 `pip install cascadeur-mcp` command.
+
+Version `0.5.0a13` adds [persistent failed-recovery protection](docs/PERSISTENT_RECOVERY.md)
+and read-only `get_recovery_status()`. Reopening a changed quarantine does not
+unlock writes; the complete recorded pre-failure checkpoint must match. This
+does not fix native shutdown or cover every mid-write crash. Upgrade/restart both
+peers for write contract revision 3. Other-machine host connection remains unverified.
 
 Version `0.5.0a9` extends failed-character-recovery protection to every MCP
 write route on that scene, including legacy transforms, timeline, playback start
 and FBX export. Reads, owned playback stop and saving a new quarantine `.casc`
 remain available. This is a session-local guard, not a persistent/native UI lock.
-Write contract revision is now 2: upgrade and restart both client and host.
+a9 introduced write contract revision 2; a13 now requires revision 3.
+Upgrade and restart both client and host.
 See [recovery protection](docs/CAPABILITIES_AND_ERRORS.md#scene-recovery-write-gate).
 Existing users should follow the [upgrade checklist](docs/UPGRADING.md).
 
@@ -31,7 +45,7 @@ Version `0.5.0a6` adds
 `offset_semantic_pose_sequence_preserving_curves`: a separate existing-key edit
 that keeps track/key/interpolation/easing metadata and protects unedited baked
 tracks. See [curve-preserving editing](docs/CURVE_PRESERVING_EDITING.md) for its
-strict supported scope. Existing writing tools keep their previous behavior.
+strict supported scope. Ordinary Point sequence writes retain their eight-frame limit. Native playback now sets both playback and visible timeline boundaries; see the sampled-motion notes below.
 
 An experimental Python bridge that lets MCP clients inspect and edit animation
 inside a running Cascadeur instance, without Computer Use.
@@ -69,16 +83,25 @@ MCP client → official MCP Python SDK (stdio)
 - `set_pose_sequence`: up to eight existing frames in one checked transaction,
   with guarded rollback attempts and explicit recovery-required errors.
 - Session snapshots and a durable, single-pose JSON snapshot format.
+- `get_recovery_status`: read the persistent instance fence after an explicitly
+  unverified character recovery. A changed quarantine remains blocked across
+  restarts; only a matching complete pre-failure checkpoint permits write checks.
 - Validated Cascy finger-local read/write channels through `get_hand_pose` and
   `set_hand_pose_sequence`; hand Point targets alone do not make a fist.
 - Native playback observation, bounded retiming, scene-copy saving and FBX
   export with a native license-entitlement check.
 
+- Opt-in `set_pose_sequence(..., sampled_motion=true)` writes up to 64 complete,
+  increasing semantic Point poses in one checked native transaction. It requires
+  the full stored playback/visible range; ordinary calls remain limited to eight.
+  Large skeleton reads can omit track section details with
+  `include_track_sections=false`. See [sampled motion and measured safety](docs/SAMPLED_MOTION.md).
+
 ## Status and requirements
 
 **Alpha research prototype, not a general production animation SDK.** Local
 development validation used Windows, Cascadeur 2026.2.2 and Python 3.12.
-Current source version: `0.5.0a11` (Alpha trial prerelease).
+Current source version: `0.5.0a13` (Alpha); write-contract revision: `3`.
 **Validation has only been performed on the developer's local machine.
 Cascadeur host connection on other machines has NOT been verified.** A clean
 virtual-environment installation test on that same machine does not establish
@@ -123,10 +146,10 @@ py -3.12 -m venv .venv
 ```
 
 Install the host hook separately. Save scenes and close Cascadeur normally.
-Replace the example installation path, preview, then apply:
+Enter your actual installation folder, preview, then apply:
 
 ```powershell
-$cascadeurHome = 'D:\Apps\Cascadeur' # your actual Cascadeur installation
+$cascadeurHome = Read-Host 'Enter your Cascadeur installation folder'
 .\.venv\Scripts\python.exe -m cascadeur_mcp.manage install-host --cascadeur-home $cascadeurHome
 .\.venv\Scripts\python.exe -m cascadeur_mcp.manage install-host --cascadeur-home $cascadeurHome --apply
 ```

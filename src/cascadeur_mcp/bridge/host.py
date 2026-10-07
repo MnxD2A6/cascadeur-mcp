@@ -119,7 +119,13 @@ class HostBridge:
                     raise BridgeError("SESSION_LIMIT: restart bridge after 10000 requests")
                 self.seen.add(rid)
                 phase = 'host_dispatch'
-                result = dispatch(method, params)
+                from .recovery import host_context, complete_write
+                with host_context(self.root, self.session):
+                    result = dispatch(method, params)
+                    completed = True
+                    phase = 'host_result'
+                    if method in WRITE_METHODS and method not in ('stop_animation', 'save_scene_copy'):
+                        complete_write()
                 completed = True
                 phase = 'host_result'
                 write_json(response, {**envelope, "ok": True, "result": result})

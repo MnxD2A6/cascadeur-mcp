@@ -268,6 +268,8 @@ def require_recovered(scene):
     if entry is not None and entry['locked']:
         raise BridgeError('RECOVERY_REQUIRED: prior rollback could not be verified',
                           execution_state='recovery_required', rollback_verified=False)
+    from .recovery import require_recovered as require_persistent_recovery
+    require_persistent_recovery(scene)
 
 
 def journal(scene):
@@ -346,6 +348,8 @@ def _transaction_failure(scene,before,transaction_journal,exc,snapshot_id,code,r
         recovery_error=type(recovery_exc).__name__
     if not restored:
         transaction_journal['locked']=True
+        from .recovery import persist
+        persist(before)
     return BridgeError(code+': '+str(exc)+'; rollback_verified='+str(restored)+
                        '; recovery_error='+str(recovery_error)+'; snapshot_id='+snapshot_id,
                        execution_state='rolled_back' if restored else 'recovery_required',
@@ -374,7 +378,7 @@ def writable_layers(scene,owned):
 
 
 def set_sequence(view,scene,cid,entries,postcondition=None,configure_tracks=None,after_interpolation=None,
-                 *,write_control_ids=None,preserve_existing_keys=False,recovery_postcondition=None):
+                 *,write_control_ids=None,preserve_existing_keys=False,recovery_postcondition=None,entry_limit=8):
     """One native transaction, including every frame and postcondition.
 
     The callbacks are internal callables, never accepted from MCP or deserialized.
@@ -386,7 +390,7 @@ def set_sequence(view,scene,cid,entries,postcondition=None,configure_tracks=None
     from .curve_edit import require_recoverable_curves
     require_recoverable_curves(scene)
     rig,joints,owned,controls=identify(scene,cid)
-    if not 1<=len(entries)<=8 or len({e['frame'] for e in entries})!=len(entries):
+    if entry_limit not in (8,64) or not 1<=len(entries)<=entry_limit or len({e['frame'] for e in entries})!=len(entries):
         raise BridgeError('INVALID_SEQUENCE: require 1-8 distinct frames')
     for entry in entries:
         if set(entry['pose'])!=set(controls): raise BridgeError('INCOMPLETE_CHARACTER_POSE: supply exactly all returned native Point IDs')
@@ -472,7 +476,8 @@ def set_sequence(view,scene,cid,entries,postcondition=None,configure_tracks=None
             raise BridgeError('NATIVE_MODIFY_FAILED: '+str(mutation['callback_error']))
         poses,adjustments,worst,after_state,metrics=_verify_committed(
             scene,_snapshots[snapshot['snapshot_id']],verify,mutation['verified'][3])
-        j['entries'].append({'id':uuid.uuid4().hex,'before':before,'after':after_state})
+        j['entries'].append({'id':uuid.uuid4().hex,'before':before,'after':after_state,
+                             'callback_state':mutation['verified'][3]})
         return {'scene_id':scene_id(view),'character_id':cid,'native_poses':poses,
             'snapshot_id':snapshot['snapshot_id'],'joints_read':len(joints),'controls_written':len(write_ids)*len(entries),
             'frames_written':[e['frame'] for e in entries],
@@ -499,10 +504,12 @@ def restore(view,scene,sid):
         last=j['entries'][-1]
         if not equivalent(capture(scene),last['after']):
             raise BridgeError('EXTERNAL_EDIT_DETECTED: state changed outside C01')
-        states=[s for e in j['entries'][len(prefix):] for s in (e['before'],e['after'])]
+        states=[state for e in j['entries'][len(prefix):] for state in (e['before'],e.get('callback_state',e['after']),e['after'])]
         try: steps=restore_native(scene,snap,states)
         except Exception as exc:
             j['locked']=True
+            from .recovery import persist
+            persist(snap['state'])
             raise BridgeError('RESTORE_FAILED: '+str(exc),execution_state='recovery_required',
                               rollback_verified=False,recovery_snapshot_id=sid) from exc
         del j['entries'][len(prefix):]
@@ -511,6 +518,8 @@ def restore(view,scene,sid):
             raise BridgeError('SNAPSHOT_STATE_MISMATCH: external edit detected')
     except Exception as exc:
         j['locked']=True
+        from .recovery import persist
+        persist(snap['state'])
         raise BridgeError('SNAPSHOT_STATE_MISMATCH: restore could not be verified',
                           execution_state='recovery_required',rollback_verified=False,
                           recovery_snapshot_id=sid) from exc
@@ -529,7 +538,12 @@ def dispatch(view,scene,method,params):
     if method=='restore_pose_snapshot': return restore(view,scene,params['snapshot_id'])
     cid=params['character_id']
     if method=='save_pose_snapshot': return save_snapshot(view,scene,cid)
-    if method=='get_character_skeleton': return skeleton(view,scene,cid)
+    if method=='get_character_skeleton':
+        result=skeleton(view,scene,cid)
+        if not params.get('include_track_sections',True):
+            for track in result['tracks'].values(): track.pop('sections',None)
+            result['track_sections_included']=False
+        return result
     if method=='get_character_pose': return get_pose(view,scene,cid,params['frame'])
     if method=='set_character_pose': return set_pose(view,scene,cid,params['frame'],params['pose'])
     raise BridgeError('UNKNOWN_METHOD: character adapter')

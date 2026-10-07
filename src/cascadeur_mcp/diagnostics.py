@@ -1,6 +1,8 @@
 """Fixed, shareable doctor explanations; never include raw host error text."""
 
 ADVICE = {
+    'RECOVERY_FENCE_PRESENT': ('A prior unverified recovery fence persists across restart.', 'Open the latest verified pre-failure native checkpoint and call get_recovery_status. Do not delete the record or reopen quarantine as recovery. Doctor does not verify full scene state.'),
+    'INVALID_RECOVERY_RECORD': ('The persistent recovery record cannot be validated; writes fail closed.', 'Stop writes and preserve the private recovery record for diagnosis. Do not delete or edit it to bypass protection.'),
     'INVALID_INSTANCE': ('The instance name is invalid.', 'Use an instance name starting with a lowercase letter, followed by lowercase letters, digits, underscores or hyphens (at most 32 characters). Match it on both peers.'),
     'INVALID_SOURCE': ('The selected source does not contain the required bridge package files.', 'Use the directory containing cascadeur_mcp, such as checkout src or this environment\'s site-packages.'),
     'INVALID_CASCADEUR_LAYOUT': ('The selected directory does not match the supported Windows installation layout.', 'Set --cascadeur-home to the directory containing cascadeur.exe and resources/scripts/python/events/application_started.'),

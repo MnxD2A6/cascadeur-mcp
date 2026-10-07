@@ -1,8 +1,20 @@
 # Upgrading the Alpha bridge
 
+## Current a13 source Alpha
+
+a13 is available in this repository's current source. The expected package is
+`0.5.0a13` and write-contract revision is `3`. Use the preservation/update/restart
+steps below with this source or a matching wheel. Do not overwrite a live host's
+loaded modules. Old revision-2
+clients cannot write to an a13 host. Call `get_recovery_status` before editing if a
+persistent fence is reported; see [persistent recovery](PERSISTENT_RECOVERY.md).
+
+## Earlier packaged a11 trial
+
 The a11 Alpha trial is available as a GitHub prerelease. Obtain its source or supplied
-wheel first; do not assume a package index provides it. The following source
-checkout steps target a11. For wheel installation, use the matching wheel path
+wheel first; do not assume a package index provides it. That trial retains revision
+2 and does not contain a12/a13 features. The following source checkout steps target
+a13. For wheel installation, use the matching wheel path
 in place of the editable-install command.
 
 The a8-to-a9 write contract changed from revision **1** to **2**, while tool
@@ -26,7 +38,7 @@ This adds a recovery write gate; it does not fix native shutdown crashes.
    .\.venv\Scripts\python.exe -c "import cascadeur_mcp; from cascadeur_mcp.bridge.compatibility import describe; print(cascadeur_mcp.__version__); print(describe())"
    ```
 
-   Expected a11 trial version: `0.5.0a11`; write-contract revision: `2`.
+   Expected a13 source version: `0.5.0a13`; write-contract revision: `3`.
    These are local package checks, not a connection test.
 4. A managed hook already pointing to this same `src` path does not need to be
    overwritten. Use `install-host` **without** `--apply` to inspect it, following
@@ -41,9 +53,9 @@ Run `python -m cascadeur_mcp.manage doctor --live` with the configured environme
 and instance. A successful read connection alone does not establish write readiness.
 
 Through the MCP client, call `get_bridge_capabilities()` with `{}`. After a full
-matched a11 installation, the responding host should report
-`host.bridge_package_version: 0.5.0a11` and
-`write_contract.revision: 2`; the full write contract must match the local one,
+matched a13 installation, the responding host should report
+`host.bridge_package_version: 0.5.0a13` and
+`write_contract.revision: 3`; the full write contract must match the local one,
 including its schema hash. Then use `get_scene_info()` and `list_characters()` to
 rediscover current scene and character IDs. Do not reuse a previous session's
 scene ID or in-memory snapshot ID.

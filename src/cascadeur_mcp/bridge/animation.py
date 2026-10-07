@@ -74,6 +74,14 @@ def check_readback(after, params):
 def dispatch(view, scene, method, params):
     from . import skeleton, character, playback
     from ..tools.animation_schema import WRITE_METHODS
+    if method == 'get_recovery_status':
+        from .recovery import status
+        result = status(scene)
+        entry = character._journals.get(id(scene))
+        if entry is not None and entry['locked']:
+            result.update(status='RECOVERY_REQUIRED', writes_blocked=True,
+                          next_step='Stop writes; preserve a NEW quarantine and reopen the verified native checkpoint. Restart alone is not recovery.')
+        return result
     # A failed character recovery protects the active scene across write routes.
     # Keep inspection, owned playback stop and a NEW quarantine copy available.
     if method in WRITE_METHODS and method not in ('stop_animation', 'save_scene_copy'):

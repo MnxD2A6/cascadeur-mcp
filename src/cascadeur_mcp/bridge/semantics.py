@@ -188,12 +188,20 @@ def offset_sequence(view,scene,params,*,preserve_curves=False):
                               include_joint_state=False) for e in entries]}
 
 
+def require_sampling_range(view,scene):
+    boundary=view.animation_boundary()
+    end=scene.data_viewer().get_animation_size()-1
+    if boundary.first_frame>0 or boundary.first_visible_frame>0 or boundary.last_frame<end or boundary.last_visible_frame<end:
+        raise BridgeError('FULL_TIMELINE_RANGE_REQUIRED: play/stop the full stored range before sampled motion so native Undo can refresh every frame',execution_state='not_started')
+
+
 def dispatch(view,scene,method,params):
     if method=='offset_semantic_pose_sequence_preserving_curves':
         return offset_sequence(view,scene,params,preserve_curves=True)
     if method=='offset_semantic_pose_sequence': return offset_sequence(view,scene,params)
     if 'scene_id' in params and params['scene_id']!=character.scene_id(view):
         raise BridgeError('SCENE_MISMATCH: wrong saved scene identity')
+    if params.get('sampled_motion',False):require_sampling_range(view,scene)
     cid=params['character_id'];rig=mapping(view,scene,cid)
     if method=='get_rig_semantics': return rig
     if method=='get_semantic_pose':
@@ -210,7 +218,15 @@ def dispatch(view,scene,method,params):
     for entry in entries:
         old=character.get_pose(view,scene,cid,entry['frame'])['pose']
         native.append({'frame':entry['frame'],'pose':expand(rig,old,entry['pose'])})
-    result=character.set_sequence(view,scene,cid,native)
-    result.pop('native_poses')
+    sampled=params.get('sampled_motion',False)
+    result=character.set_sequence(view,scene,cid,native,entry_limit=64 if sampled else 8)
+    actual=result.pop('native_poses')
+    if sampled:
+        import hashlib,json
+        digests=[{'frame':p['frame'],'native_point_sha256':hashlib.sha256(json.dumps(p['pose'],sort_keys=True,allow_nan=False).encode()).hexdigest()} for p in actual]
+        result.pop('solver_adjustments',None)
+        return {**result,'profile':rig['profile'],'fingerprint':rig['fingerprint'],
+                'sampled_motion':True,'sample_count':len(entries),'actual_point_hashes':digests,
+                'poses_omitted':True,'readback_tool':'get_semantic_pose_sequence'}
     return {**result,'profile':rig['profile'],'fingerprint':rig['fingerprint'],
             'poses':[get_pose(view,scene,cid,e['frame'],rig) for e in entries]}

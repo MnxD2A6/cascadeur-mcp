@@ -101,6 +101,8 @@ WRITE_METHODS.add('set_hand_pose_sequence')
 from . import readiness_schema
 SCHEMAS.update(readiness_schema.SCHEMAS)
 DESCRIPTIONS.update(readiness_schema.DESCRIPTIONS)
+SCHEMAS['get_recovery_status'] = {'type':'object', 'properties':{}, 'required':[], 'additionalProperties':False}
+DESCRIPTIONS['get_recovery_status'] = 'Read the persistent explicit failed-recovery fence and verify the current full native checkpoint without clearing the fence or modifying the scene. Restart alone does not recover a quarantined scene. Only a matching complete pre-failure model state can permit writes; a single-pose JSON is insufficient. Does not cover every unexpected mid-write crash.'
 
 
 def validate(method, params):

@@ -6,7 +6,8 @@ successful Python install or `tools/list` does not prove a live host connection.
 Start with one read-only check using your actual installation path:
 
 ```powershell
-.\.venv\Scripts\python.exe -m cascadeur_mcp.manage doctor --cascadeur-home 'D:\Apps\Cascadeur' --live --format text
+$cascadeurHome = Read-Host 'Enter your Cascadeur installation folder'
+.\.venv\Scripts\python.exe -m cascadeur_mcp.manage doctor --cascadeur-home $cascadeurHome --live --format text
 ```
 
 Each observed problem has a reason and `Next:` action. On Windows, supplying

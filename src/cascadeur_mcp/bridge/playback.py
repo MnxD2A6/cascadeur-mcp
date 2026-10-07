@@ -12,6 +12,17 @@ def require_idle():
 def public():
     return {k:v for k,v in _run.items() if k not in ('view','scene','timer','started','last_change','observed')}
 
+def configure_boundary(view,start,end):
+    # Official installed csc.view.AnimationBoundary properties (2026.2.2 stubs).
+    names=('first_frame','last_frame','first_visible_frame','last_visible_frame')
+    boundary=view.animation_boundary()
+    before={name:getattr(boundary,name) for name in names}
+    boundary.first_frame=start;boundary.last_frame=end
+    boundary.first_visible_frame=start;boundary.last_visible_frame=end
+    current=view.animation_boundary()
+    return {'before':before,'after':{name:getattr(current,name) for name in names}}
+
+
 def dispatch(view,scene,method,params):
     global _run
     import csc
@@ -48,7 +59,7 @@ def dispatch(view,scene,method,params):
                     raise BridgeError('EXTERNAL_PLAYBACK: frame moved during stopped-state check')
                 run['initial_frame']=frame
                 if elapsed>=0.3:
-                    boundary=view.animation_boundary();boundary.first_frame=start;boundary.last_frame=end
+                    run['boundary']=configure_boundary(view,start,end)
                     scene.set_current_frame(start);run['frame_set_calls']=1
                     app.get_action_manager().call_action('Timeline.Play');run['native_play_calls']=1
                     run['status']='playing';run['play_at']=elapsed

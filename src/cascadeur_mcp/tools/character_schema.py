@@ -12,7 +12,7 @@ def schema(props,required=()):
 
 SCHEMAS = {
  'list_characters':schema({}),
- 'get_character_skeleton':schema({'character_id':UUID},('character_id',)),
+ 'get_character_skeleton':schema({'character_id':UUID,'include_track_sections':{'type':'boolean','default':True}},('character_id',)),
  'get_character_pose':schema({'character_id':UUID,'frame':FRAME},('character_id','frame')),
  'set_character_pose':schema({'scene_id':SCENE,'character_id':UUID,'frame':FRAME,
     'pose':{'type':'object','minProperties':1,'maxProperties':64,'propertyNames':UUID,
@@ -22,7 +22,7 @@ SCHEMAS = {
 }
 DESCRIPTIONS = {
  'list_characters':'List actual RigInfo owner UUIDs in the saved scene; names are display labels only.',
- 'get_character_skeleton':'Read full native joint hierarchy, rig controls, bindings, constraint references and shared tracks by character UUID.',
+ 'get_character_skeleton':'Read full hierarchy, controls, bindings and constraints by UUID. include_track_sections=false retains track membership/keys but omits per-key section details to bound large-clip responses.',
  'get_character_pose':'Read every character joint local/global transform plus all native Point targets in ONE call. Returned pose is writable by set_character_pose.',
  'set_character_pose':'Write the complete native Point target set in ONE native transaction at an EXISTING frame (0-120). Rig solves joints; constraints and IK mode retained. Captures full-scene snapshot; failures automatically verify rollback. Exclusive C01 pose editing required; timeout is unknown outcome, read back before retry.',
  'play_animation':'Start a bounded native Timeline.Play observation on a stopped scene. Returns pending: call stop_animation later for measured playback/stop evidence. Never advances frames with a script. Requires exclusive playback ownership; rejects edits while active.',
@@ -30,6 +30,8 @@ DESCRIPTIONS = {
 }
 
 def validate(params):
+    if 'include_track_sections' in params and type(params['include_track_sections']) is not bool:
+        raise ValueError('include_track_sections must be boolean')
     for field,spec in [('character_id',UUID),('scene_id',SCENE)]:
         if field in params and (type(params[field]) is not str or not re.fullmatch(spec['pattern'],params[field])):
             raise ValueError('invalid '+field)
