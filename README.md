@@ -1,18 +1,15 @@
 # Cascadeur MCP
 
-Source Alpha `0.5.0a13` on `main` includes opt-in complete sampled motion,
+Alpha trial `0.5.0a13` includes opt-in complete sampled motion,
 native playback/visible range coverage, and persistent failed-recovery protection.
 See [sampled motion](docs/SAMPLED_MOTION.md) and
 [persistent recovery](docs/PERSISTENT_RECOVERY.md).
 
-The earlier packaged Alpha trial `0.5.0a11` added advisory character edit preflight and a
-[long-session checkpoint workflow](docs/EDIT_READINESS_AND_CHECKPOINTS.md).
-It also includes actionable connection diagnostics and a
-[Windows trial guide](docs/TRY_IT.md). It is an Alpha, not a stable release.
-Its source and wheel packages remain available in the
-[GitHub prerelease](https://github.com/MnxD2A6/cascadeur-mcp/releases/tag/v0.5.0a11).
-For a13, use this repository's current source and the installation steps below;
-the a11 wheel does not contain the new features.
+Download matching source and wheel packages from the
+[a13 GitHub prerelease](https://github.com/MnxD2A6/cascadeur-mcp/releases/tag/v0.5.0a13).
+Follow the [Windows trial guide](docs/TRY_IT.md) or the installation steps below.
+It is an Alpha, not a stable release. The earlier a11 wheel does not contain
+the a12/a13 features. For existing installations, follow [upgrading](docs/UPGRADING.md).
 The package is not published to PyPI. Use the matching source/wheel, not a guessed
 `pip install cascadeur-mcp` command.
 
@@ -57,6 +54,12 @@ MCP client → official MCP Python SDK (stdio)
 ```
 
 ## Features
+
+Use this bridge for structured inspection, batch pose corrections, supported
+retiming, checked recovery and licensed FBX delivery. It does not contain a
+video motion-capture backend or guarantee professional animation from a prompt.
+See the [practical editing example and scope (中文)](docs/USE_CASES.md), including
+the distinction between a successful tool call and visual animation quality.
 
 - `get_bridge_capabilities`: read the responding host's loaded bridge version,
   operation classifications, limits and restrictions without probing a rig or license.

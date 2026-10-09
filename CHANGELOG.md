@@ -2,6 +2,10 @@
 
 ## 0.5.0a13 — 2026-10-07 (Alpha source update)
 
+Packaged as an Alpha trial prerelease on 2026-10-09, with matching installation
+and upgrade instructions, source/wheel checksums, and a practical editing guide.
+Packaging adds no new native API or visual-quality guarantee.
+
 - Persist explicit unverified character recovery state across host restarts.
   Reopened quarantine is blocked; complete matching pre-failure native model
   state is required before editing can proceed. No unchecked unlock is added.

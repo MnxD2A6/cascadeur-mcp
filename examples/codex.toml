@@ -6,3 +6,4 @@ args = ["-m", "cascadeur_mcp.server"]
 startup_timeout_sec = 15
 tool_timeout_sec = 15
 enabled_tools = ["ping_cascadeur", "get_scene_info", "get_objects"]
+# Optional editing workflow and explicit tool selection: docs/USE_CASES.md.

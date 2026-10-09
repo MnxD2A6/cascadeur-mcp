@@ -1,6 +1,6 @@
 # Windows Alpha trial guide
 
-This guide targets the supplied 0.5.0a11 source/wheel prerelease. It is not a
+This guide targets the supplied 0.5.0a13 source/wheel prerelease. It is not a
 stable release or a claim that PyPI contains this package. Cascadeur host
 connection has only been validated on the developer's local Windows machine;
 other machines remain unverified. Testing a fresh Python environment locally
@@ -33,14 +33,16 @@ py -3.12 -m venv .venv
 .\.venv\Scripts\python.exe -c "import cascadeur_mcp; print(cascadeur_mcp.__version__)"
 ```
 
-Expected trial version: `0.5.0a11`. No activation script is required.
+Expected trial version: `0.5.0a13`; write-contract revision: `3`.
+No activation script is required.
 Developers may instead install `".[test]"` and run `python -m pytest -q`.
 
 Alternatively, create the external environment in a permanent directory and
 install the supplied wheel with that environment's Python:
 
 ```powershell
-.\.venv\Scripts\python.exe -m pip install 'C:\Downloads\cascadeur_mcp-0.5.0a11-py3-none-any.whl'
+$wheelPath = Read-Host 'Enter the absolute path to cascadeur_mcp-0.5.0a13-py3-none-any.whl'
+.\.venv\Scripts\python.exe -m pip install $wheelPath
 .\.venv\Scripts\python.exe -m pip check
 ```
 
@@ -94,7 +96,8 @@ the MCP client after configuration changes. First ask it to call
 Real returned data is the first connection acceptance, not `tools/list` alone.
 Keep host and client `CASCADEUR_MCP_INSTANCE` equal (default `c01`).
 
-For editing, enable only the needed tools after reading their contracts. Keep
+For a complete existing-key correction example, see
+[practical use cases (中文)](USE_CASES.md). For editing, enable only the needed tools after reading their contracts. Keep
 a separate native scene copy, discover current IDs, inspect rig semantics, and
 read back results. A matching contract is not permission to ignore rig/track
 restrictions. Stop on `recovery_required`; read back before deciding whether to

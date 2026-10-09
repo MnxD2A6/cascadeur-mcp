@@ -1,8 +1,10 @@
 # Upgrading the Alpha bridge
 
-## Current a13 source Alpha
+## Current a13 Alpha trial
 
-a13 is available in this repository's current source. The expected package is
+a13 is available as source and a matching wheel in the
+[GitHub prerelease](https://github.com/MnxD2A6/cascadeur-mcp/releases/tag/v0.5.0a13).
+The expected package is
 `0.5.0a13` and write-contract revision is `3`. Use the preservation/update/restart
 steps below with this source or a matching wheel. Do not overwrite a live host's
 loaded modules. Old revision-2
